@@ -1,0 +1,48 @@
+import { User, Coins, Gift, Package } from 'lucide-react';
+
+export const slides = [
+    {
+        id: 1,
+        headline: 'BEST ACCOUNTS, BEST DEALS',
+        subtext: 'Get premium accounts at unbeatable prices. Start playing instantly!',
+        ctaText: 'Shop Accounts',
+        ctaLink: '/services/accounts',
+        accentColor: 'from-orange-600 to-orange-400',
+        icon: User,
+        image: 'https://placehold.co/600x400',
+        bgColor: 'from-black via-gray-900 to-black',
+    },
+    {
+        id: 2,
+        headline: 'LEVEL UP WITH IN-GAME CURRENCY',
+        subtext: 'Buy game currency at the lowest prices and power up your progress!',
+        ctaText: 'Buy Currency',
+        ctaLink: '/currency',
+        accentColor: 'from-orange-600 to-orange-400',
+        icon: Coins,
+        image: 'https://placehold.co/600x400',
+        bgColor: 'from-black via-gray-900 to-black',
+    },
+    {
+        id: 3,
+        headline: 'GIFT CARDS FOR EVERY GAMER',
+        subtext: 'PlayStation, Xbox, Steam & more — all in one place.',
+        ctaText: 'Get Gift Cards',
+        ctaLink: '/gift-cards',
+        accentColor: 'from-orange-600 to-orange-400',
+        icon: Gift,
+        image: 'https://placehold.co/600x400',
+        bgColor: 'from-black via-gray-900 to-black',
+    },
+    {
+        id: 4,
+        headline: 'RARE IN-GAME ITEMS',
+        subtext: 'Unlock rare skins, weapons, and more — instantly delivered.',
+        ctaText: 'Browse Items',
+        ctaLink: '/items',
+        accentColor: 'from-orange-600 to-orange-400',
+        icon: Package,
+        image: 'https://placehold.co/600x400',
+        bgColor: 'from-black via-gray-900 to-black',
+    },
+];
