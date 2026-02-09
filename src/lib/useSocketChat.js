@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { getSocket } from '@/lib/socket';
+import { useSocket } from './SocketContext';
 
 function safeParseInt(v) {
   if (v === null || v === undefined) return null;
@@ -41,12 +41,12 @@ function writeLastMessageId(conversationKey, lastMessageId) {
 }
 
 export function useSocketChat({ enabled, activeUserId, receiverId, loadHistoryOnConnect = true }) {
-  const [session, setSession] = useState(null);
+  const { socket, isConnected, session: socketSession, error: socketError } = useSocket();
   const [messages, setMessages] = useState([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  const role = session && session.role ? session.role : null;
+  const role = socketSession?.role || null;
 
   const convoKey = useMemo(() => {
     const userIdForKey = role === 'admin' ? receiverId : activeUserId;
@@ -57,20 +57,27 @@ export function useSocketChat({ enabled, activeUserId, receiverId, loadHistoryOn
   const pendingByClientIdRef = useRef(new Map());
   const seenSentRef = useRef(new Set());
 
+  useEffect(() => {
+    if (socketError) {
+      setError(socketError);
+    }
+  }, [socketError]);
+
   const markMessageSeen = useCallback(
-    (messageId) => {
+    async (messageId) => {
       const idNum = safeParseInt(messageId);
       if (!idNum) return;
       if (!enabled) return;
+
+      if (!socket) return;
 
       const key = String(idNum);
       if (seenSentRef.current.has(key)) return;
       seenSentRef.current.add(key);
 
-      const socket = getSocket();
       socket.emit('message:seen', { message_id: idNum });
     },
-    [enabled]
+    [enabled, socket]
   );
 
   const appendMessage = useCallback(
@@ -126,7 +133,7 @@ export function useSocketChat({ enabled, activeUserId, receiverId, loadHistoryOn
 
   const loadHistory = useCallback(
     ({ beforeId } = {}) => {
-      const socket = getSocket();
+      if (!socket) return;
       const targetUserId = role === 'admin' ? receiverId : activeUserId;
       if (!targetUserId) {
         setError(role === 'admin' ? 'receiver_id is required' : 'Missing user id');
@@ -151,79 +158,69 @@ export function useSocketChat({ enabled, activeUserId, receiverId, loadHistoryOn
         setHistory(res);
       });
     },
-    [activeUserId, receiverId, role, setHistory]
+    [activeUserId, receiverId, role, setHistory, socket]
   );
 
   const sync = useCallback(() => {
-    const socket = getSocket();
+    if (!socket) return;
     const targetUserId = role === 'admin' ? receiverId : activeUserId;
-    if (!targetUserId) return;
+      if (!targetUserId) return;
 
-    const stored = readLastMessageId(convoKey);
-    const afterId = safeParseInt(lastMessageIdRef.current) || stored;
-    if (!afterId) return;
+      const stored = readLastMessageId(convoKey);
+      const afterId = safeParseInt(lastMessageIdRef.current) || stored;
+      if (!afterId) return;
 
-    socket.emit('chat:sync', { user_id: targetUserId, after_id: afterId }, (res) => {
-      if (res && res.success === false) return;
-      const list = res && typeof res === 'object' && Array.isArray(res.messages) ? res.messages : [];
-      const ordered = [...list].reverse();
-      ordered.forEach(appendMessage);
-    });
-  }, [activeUserId, appendMessage, convoKey, receiverId, role]);
+      socket.emit('chat:sync', { user_id: targetUserId, after_id: afterId }, (res) => {
+        if (res && res.success === false) return;
+        const list = res && typeof res === 'object' && Array.isArray(res.messages) ? res.messages : [];
+        list.forEach((m) => appendMessage(m));
+      });
+    },
+    [activeUserId, receiverId, role, convoKey, appendMessage, socket]
+  );
 
   const sendMessage = useCallback(
-    ({ message_type = 'text', message, client_message_id } = {}) => {
-      const socket = getSocket();
-      const type = message_type === 'media' ? 'media' : 'text';
-      const msgText = type === 'text' ? (typeof message === 'string' ? message : '') : null;
-      const mediaObj = type === 'media' ? (message && typeof message === 'object' ? message : (typeof message === 'string' ? { url: message } : null)) : null;
+    ({ text, media }) => {
+      if (!socket) return;
 
-      if (type === 'text') {
-        if (!msgText.trim()) return;
-      } else {
-        if (!mediaObj || !mediaObj.url) return;
-      }
+      const type = media && typeof media === 'object' ? 'media' : 'text';
+      const msgText = type === 'text' && text ? String(text).trim() : '';
 
-      const clientId = client_message_id || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-
-      const payload = {
-        client_message_id: clientId,
-        message_type: type,
-        message: type === 'text' ? msgText : mediaObj,
-        ...(role === 'admin' ? { receiver_id: receiverId } : {}),
-      };
-
-      if (role === 'admin' && !receiverId) {
-        setError('receiver_id is required');
+      if (type === 'text' && !msgText) {
+        setError('Message cannot be empty');
         return;
       }
+      if (type === 'media' && (!media || typeof media !== 'object')) {
+        setError('Media is required');
+        return;
+      }
+
+      const clientId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const payload =
+        type === 'text'
+          ? { message_type: 'text', message: { text: msgText }, client_message_id: clientId }
+          : {
+              message_type: 'media',
+              message: { media },
+              client_message_id: clientId,
+            };
 
       pendingByClientIdRef.current.set(clientId, true);
       appendMessage({
         client_message_id: clientId,
         message_type: type,
-        message: type === 'text' ? { text: msgText } : mediaObj,
+        message: type === 'text' ? { text: msgText } : media,
         sender_role: role || 'user',
         is_seen: false,
       });
 
       socket.emit('message:send', payload);
     },
-    [appendMessage, receiverId, role]
+    [appendMessage, role, socket]
   );
 
   useEffect(() => {
-    if (!enabled) return;
-
-    const socket = getSocket();
-
-    function onChatConnected(payload) {
-      if (!payload || typeof payload !== 'object') return;
-      const uid = payload.user_id ?? payload.id;
-      const r = payload.role;
-      if (!r) return;
-      setSession({ user_id: uid, role: r });
-    }
+    if (!enabled || !socket) return;
 
     function onConnect() {
       setError('');
@@ -235,11 +232,6 @@ export function useSocketChat({ enabled, activeUserId, receiverId, loadHistoryOn
         }
         sync();
       }
-    }
-
-    function onConnectError(err) {
-      setBusy(false);
-      setError(err?.message || 'Socket connection error');
     }
 
     function onMessageNew(msg) {
@@ -267,35 +259,32 @@ export function useSocketChat({ enabled, activeUserId, receiverId, loadHistoryOn
       );
     }
 
-    socket.on('chat:connected', onChatConnected);
-    socket.on('connect', onConnect);
-    socket.on('connect_error', onConnectError);
     socket.on('message:new', onMessageNew);
     socket.on('message:sent', onMessageSent);
     socket.on('message:error', onMessageError);
     socket.on('message:seen:update', onMessageSeenUpdate);
 
-    if (socket.connected) onConnect();
+    if (isConnected) {
+      onConnect();
+    }
 
     return () => {
-      socket.off('chat:connected', onChatConnected);
-      socket.off('connect', onConnect);
-      socket.off('connect_error', onConnectError);
       socket.off('message:new', onMessageNew);
       socket.off('message:sent', onMessageSent);
       socket.off('message:error', onMessageError);
       socket.off('message:seen:update', onMessageSeenUpdate);
     };
   }, [
-    activeUserId,
-    appendMessage,
     enabled,
-    loadHistory,
-    loadHistoryOnConnect,
-    markMessageSeen,
+    socket,
+    isConnected,
+    activeUserId,
     receiverId,
     role,
+    loadHistoryOnConnect,
+    loadHistory,
     sync,
+    appendMessage,
   ]);
 
   useEffect(() => {
@@ -305,7 +294,7 @@ export function useSocketChat({ enabled, activeUserId, receiverId, loadHistoryOn
   }, [convoKey, enabled]);
 
   return {
-    session,
+    session: socketSession,
     role,
     messages,
     busy,
@@ -315,5 +304,6 @@ export function useSocketChat({ enabled, activeUserId, receiverId, loadHistoryOn
     sync,
     sendMessage,
     markMessageSeen,
+    isConnected,
   };
 }

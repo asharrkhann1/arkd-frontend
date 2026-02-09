@@ -5,6 +5,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { DataProvider } from "@/contexts/DataContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { WishlistProvider } from "@/contexts/WishlistContext";
+import { SocketProvider } from "@/lib/SocketContext";
 import { Toaster } from 'react-hot-toast';
 import PresenceTracker from "@/components/PresenceTracker";
 import ChatFab from "@/components/ChatFab";
@@ -88,8 +89,10 @@ export default async function RootLayout({ children }) {
                   },
                 }} />
                 {children}
-                <PresenceTracker />
-                <ChatFab />
+                <SocketProvider apiUrl={process.env.NEXT_PUBLIC_BACKEND_API_URL}>
+                  <PresenceTracker />
+                  <ChatFab />
+                </SocketProvider>
                 <Footer />
               </WishlistProvider>
             </CurrencyProvider>

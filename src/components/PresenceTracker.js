@@ -2,21 +2,21 @@
 
 import { useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getSocket } from '@/lib/socket';
+import { useSocket } from '@/lib/SocketContext';
 
 const IDLE_AFTER_MS = 60_000;
 const HEARTBEAT_MS = 25_000;
 
 export default function PresenceTracker() {
   const { user } = useAuth();
+  const { socket, isConnected } = useSocket();
   const lastStateRef = useRef(null);
   const idleTimerRef = useRef(null);
   const heartbeatRef = useRef(null);
+  const handlersAttached = useRef(false);
 
   useEffect(() => {
-    if (!user) return;
-
-    const socket = getSocket();
+    if (!user || !socket) return;
 
     function emitState(state) {
       if (!state) return;
@@ -54,8 +54,11 @@ export default function PresenceTracker() {
       setIdleTimer();
     }
 
+    if (handlersAttached.current) return;
+    handlersAttached.current = true;
+
     socket.on('connect', onConnect);
-    if (socket.connected) onConnect();
+    if (isConnected) onConnect();
 
     document.addEventListener('visibilitychange', onVisibilityChange);
     window.addEventListener('mousemove', onActivity, { passive: true });
@@ -78,6 +81,7 @@ export default function PresenceTracker() {
 
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+      handlersAttached.current = false;
 
       // best-effort
       try {
@@ -86,7 +90,7 @@ export default function PresenceTracker() {
         // no-op
       }
     };
-  }, [user]);
+  }, [user, socket, isConnected]);
 
   return null;
 }
