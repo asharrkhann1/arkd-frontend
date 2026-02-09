@@ -14,7 +14,8 @@ export function getSocket() {
 
   socket = io(url, {
     withCredentials: true,
-    transports: ['websocket'],
+    // Let Socket.IO use HTTP polling first (cookies work better), then upgrade to WebSocket
+    transports: ['polling', 'websocket'],
   });
 
   return socket;
