@@ -6,7 +6,7 @@ import { serviceConfigs } from '@/constants/servicesConfig';
 async function getServiceDetails(type) {
     // Normalize type (e.g., top-ups -> topups)
     const normalizedType = type.replace('-', '');
-    const res = await fetch(`${process.env.BACKEND_URL}/services/${normalizedType}`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/services/${normalizedType}`, {
         cache: 'no-store'
     });
 

@@ -8,7 +8,7 @@ async function getProduct(category, type, slug) {
 
     try {
         // Attempt 1: Direct ID endpoint
-        const res = await fetch(`${process.env.BACKEND_URL}/${slug}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/${slug}`, {
             cache: 'no-store'
         });
 
@@ -18,7 +18,7 @@ async function getProduct(category, type, slug) {
         }
 
         // Attempt 2: Fallback to category fetch and find (less efficient but safe)
-        const catRes = await fetch(`${process.env.BACKEND_URL}/${normalizedCategory}/${normalizedType}`, {
+        const catRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/${normalizedCategory}/${normalizedType}`, {
             cache: 'no-store'
         });
 

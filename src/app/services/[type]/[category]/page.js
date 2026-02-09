@@ -9,7 +9,7 @@ async function getCategoryProducts(type, category, page = 1) {
     const normalizedType = type.toLowerCase();
     const normalizedCategory = category.toLowerCase();
     try {
-        const res = await fetch(`${process.env.BACKEND_URL}/${normalizedCategory}/${normalizedType}?page=${page}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/${normalizedCategory}/${normalizedType}?page=${page}`, {
             cache: 'no-store'
         });
         if (!res.ok) return null;

@@ -5,7 +5,7 @@ import { serviceConfigs } from '@/constants/servicesConfig';
 
 async function getAllServices() {
     try {
-        const res = await fetch(`${process.env.BACKEND_URL}/services`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/services`, {
             cache: 'no-store'
         });
 

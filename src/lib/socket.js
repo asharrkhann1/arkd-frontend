@@ -7,7 +7,7 @@ let socket;
 export function getSocket() {
   if (socket) return socket;
 
-  const url = "http://localhost:3000";
+  const url = process.env.NEXT_PUBLIC_BACKEND_API_URL;
   if (!url) {
     throw new Error('BACKEND_URL is not set');
   }

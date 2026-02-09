@@ -19,7 +19,7 @@ export const metadata = {
 async function getInitialData(cookieHeader) {
   const headers = cookieHeader ? { cookie: cookieHeader } : undefined;
 
-  const serviceResponse = await fetch(`${process.env.BACKEND_URL}/services`, {
+  const serviceResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/services`, {
     cache: "no-store",
     headers,
     credentials: "include"
@@ -35,7 +35,7 @@ async function getInitialData(cookieHeader) {
   let wishlistItems = [];
   try {
     if (headers) {
-      const wlRes = await fetch(`${process.env.BACKEND_URL}/wishlist/me`, {
+      const wlRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/wishlist/me`, {
         cache: "no-store",
         headers
       });
