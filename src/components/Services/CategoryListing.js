@@ -561,18 +561,6 @@ function ProductCard({ item, type, category, formatPrice, selectedCurrency, togg
 
                         {/* Top Right: Quantity Available */}
                         <div className="absolute top-6 right-6 pointer-events-auto">
-                            {(() => {
-                                console.log('Stock Debug:', {
-                                    title: item.title,
-                                    stock_mode: item.stock_mode,
-                                    quantity_available: item.quantity_available,
-                                    type_of_quantity: typeof item.quantity_available,
-                                    is_null: item.quantity_available === null,
-                                    is_undefined: item.quantity_available === undefined,
-                                    check_result: (item.stock_mode !== 'limited' || (item.quantity_available != null && item.quantity_available > 0))
-                                });
-                                return null;
-                            })()}
                             <div className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase backdrop-blur-xl border shadow-lg ${(item.stock_mode !== 'limited' || (item.quantity_available != null && item.quantity_available > 0))
                                 ? 'bg-green-500/20 border-green-500/50 text-green-400'
                                 : 'bg-red-500/20 border-red-500/50 text-red-500'

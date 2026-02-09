@@ -6,6 +6,8 @@ import { DataProvider } from "@/contexts/DataContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { WishlistProvider } from "@/contexts/WishlistContext";
 import { Toaster } from 'react-hot-toast';
+import PresenceTracker from "@/components/PresenceTracker";
+import ChatFab from "@/components/ChatFab";
 
 import { cookies } from "next/headers";
 
@@ -86,6 +88,8 @@ export default async function RootLayout({ children }) {
                   },
                 }} />
                 {children}
+                <PresenceTracker />
+                <ChatFab />
                 <Footer />
               </WishlistProvider>
             </CurrencyProvider>

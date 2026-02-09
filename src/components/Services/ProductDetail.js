@@ -166,18 +166,6 @@ export default function ProductDetail({ product, type, category }) {
                                             </span>
                                         )}
                                     </div>
-                                    {(() => {
-                                        console.log('ProductDetail Stock Debug:', {
-                                            title: product.title,
-                                            stock_mode: product.stock_mode,
-                                            quantity_available: product.quantity_available,
-                                            type_of_quantity: typeof product.quantity_available,
-                                            is_null: product.quantity_available === null,
-                                            is_undefined: product.quantity_available === undefined,
-                                            check_result: (product.stock_mode !== 'limited' || (product.quantity_available != null && product.quantity_available > 0))
-                                        });
-                                        return null;
-                                    })()}
                                     <div className={`flex items-center gap-3 py-1 px-4 rounded-full w-fit border ${(product.stock_mode !== 'limited' || (product.quantity_available != null && product.quantity_available > 0))
                                         ? 'bg-green-500/10 border-green-500/20'
                                         : 'bg-red-500/10 border-red-500/20'
