@@ -12,7 +12,7 @@ export function SocketProvider({ children }) {
     const [isConnected, setIsConnected] = useState(false);
     const [error, setError] = useState(null);
 
-    const connect = useCallback(() => {
+    const connect = useCallback(async () => {
         if (!user) {
             if (socket) {
                 socket.disconnect();
@@ -31,9 +31,23 @@ export function SocketProvider({ children }) {
         // Avoid creating duplicate connections
         if (socket?.connected) return;
 
+        // Fetch a short-lived auth token via the Next.js proxy (cookies work here)
+        let token;
+        try {
+            const res = await fetch('/api/auth/socket-token', { credentials: 'include' });
+            if (!res.ok) throw new Error('Failed to get socket token');
+            const data = await res.json();
+            token = data.token;
+        } catch (err) {
+            console.error('Socket token fetch failed:', err.message);
+            setError('Auth failed — cannot connect socket');
+            return;
+        }
+
         const newSocket = io(url, {
             withCredentials: true,
             transports: ['websocket'],
+            auth: { token },
         });
 
         newSocket.on('connect', () => {
