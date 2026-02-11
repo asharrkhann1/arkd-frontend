@@ -2,27 +2,26 @@
 
 import { useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useSocket } from '@/lib/SocketContext';
+import { useSocket } from '@/contexts/SocketContext';
 
 const IDLE_AFTER_MS = 60_000;
 const HEARTBEAT_MS = 25_000;
 
 export default function PresenceTracker() {
   const { user } = useAuth();
-  const { socket, isConnected } = useSocket();
+  const { socket, isConnected, emit, on, off } = useSocket();
   const lastStateRef = useRef(null);
   const idleTimerRef = useRef(null);
   const heartbeatRef = useRef(null);
-  const handlersAttached = useRef(false);
 
   useEffect(() => {
-    if (!user || !socket) return;
+    if (!user || !isConnected) return;
 
     function emitState(state) {
       if (!state) return;
       if (lastStateRef.current === state) return;
       lastStateRef.current = state;
-      socket.emit('presence:state', { state });
+      emit('presence:state', { state });
     }
 
     function setIdleTimer() {
@@ -54,10 +53,7 @@ export default function PresenceTracker() {
       setIdleTimer();
     }
 
-    if (handlersAttached.current) return;
-    handlersAttached.current = true;
-
-    socket.on('connect', onConnect);
+    on('connect', onConnect);
     if (isConnected) onConnect();
 
     document.addEventListener('visibilitychange', onVisibilityChange);
@@ -68,11 +64,11 @@ export default function PresenceTracker() {
 
     heartbeatRef.current = setInterval(() => {
       const state = document.hidden ? 'idle' : (lastStateRef.current || 'online');
-      socket.emit('presence:heartbeat', { state });
+      emit('presence:heartbeat', { state });
     }, HEARTBEAT_MS);
 
     return () => {
-      socket.off('connect', onConnect);
+      off('connect', onConnect);
       document.removeEventListener('visibilitychange', onVisibilityChange);
       window.removeEventListener('mousemove', onActivity);
       window.removeEventListener('keydown', onActivity);
@@ -81,16 +77,15 @@ export default function PresenceTracker() {
 
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
-      handlersAttached.current = false;
 
       // best-effort
       try {
-        socket.emit('presence:state', { state: 'offline' });
+        emit('presence:state', { state: 'offline' });
       } catch {
         // no-op
       }
     };
-  }, [user, socket, isConnected]);
+  }, [user, isConnected, emit, on, off]);
 
   return null;
 }

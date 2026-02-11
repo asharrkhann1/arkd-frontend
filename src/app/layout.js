@@ -2,10 +2,10 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { DataProvider } from "@/contexts/DataContext";
+import { SocketProvider } from '@/contexts/SocketContext';
+import { DataProvider } from '@/contexts/DataContext';
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { WishlistProvider } from "@/contexts/WishlistContext";
-import { SocketProvider } from "@/lib/SocketContext";
 import { Toaster } from 'react-hot-toast';
 import PresenceTracker from "@/components/PresenceTracker";
 import ChatFab from "@/components/ChatFab";
@@ -78,24 +78,24 @@ export default async function RootLayout({ children }) {
       >
         <DataProvider data={data} >
           <AuthProvider>
-            <CurrencyProvider initialRates={currencyRates}>
-              <WishlistProvider initialWishlist={wishlistItems}>
-                <Navbar />
-                <Toaster position="top-right" toastOptions={{
-                  style: {
-                    // background: '#333',
-                    // color: '#fff',
-                    // border: '1px solid #ffffff10',
-                  },
-                }} />
-                {children}
-                <SocketProvider apiUrl={process.env.NEXT_PUBLIC_BACKEND_API_URL}>
+            <SocketProvider>
+              <CurrencyProvider initialRates={currencyRates}>
+                <WishlistProvider initialWishlist={wishlistItems}>
+                  <Navbar />
+                  <Toaster position="top-right" toastOptions={{
+                    style: {
+                      // background: '#333',
+                      // color: '#fff',
+                      // border: '1px solid #ffffff10',
+                    },
+                  }} />
+                  {children}
                   <PresenceTracker />
                   <ChatFab />
-                </SocketProvider>
-                <Footer />
-              </WishlistProvider>
-            </CurrencyProvider>
+                  <Footer />
+                </WishlistProvider>
+              </CurrencyProvider>
+            </SocketProvider>
           </AuthProvider>
         </DataProvider>
       </body>
