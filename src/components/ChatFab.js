@@ -1,15 +1,17 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { MessageCircle, Paperclip, SendHorizonal, Volume2, VolumeX, X } from 'lucide-react';
+import { MessageCircle, Paperclip, SendHorizonal, Volume2, VolumeX, X, ChevronDown } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSocket } from '@/contexts/SocketContext';
 import { useSocketChat } from '@/lib/useSocketChat';
 import { apiFetch } from '@/lib/api';
 
 export default function ChatFab() {
   const { user } = useAuth();
+  const { emit: socketEmit, isConnected: socketConnected } = useSocket();
   const pathname = usePathname();
 
   const BEEP_KEY = 'chat_beep_muted_v1';
@@ -19,6 +21,7 @@ export default function ChatFab() {
   const [input, setInput] = useState('');
   const [uploading, setUploading] = useState(false);
   const [beepMuted, setBeepMuted] = useState(false);
+  const [showScrollBtn, setShowScrollBtn] = useState(false);
   const receiverId = 1;
 
   const isAuthed = !!user;
@@ -35,8 +38,10 @@ export default function ChatFab() {
   const containerRef = useRef(null);
   const bottomRef = useRef(null);
   const fileInputRef = useRef(null);
+  const textareaRef = useRef(null);
   const lastProcessedMessageIdRef = useRef(null);
   const beepCooldownRef = useRef(0);
+  const audioCtxRef = useRef(null);
 
   const productCardCacheRef = useRef(new Map());
 
@@ -66,7 +71,7 @@ export default function ChatFab() {
 
     messages.forEach((m) => {
       const senderRole = getRole(m);
-      if (senderRole !== 'admin') return;
+      if (senderRole !== 'admin' && senderRole !== 'system') return;
       if (!m?.id) return;
       if (m?.is_seen) return;
       markMessageSeen(m.id);
@@ -84,6 +89,18 @@ export default function ChatFab() {
     } catch {
       setBeepMuted(false);
     }
+    // Pre-warm AudioContext on first user click so beep works
+    const warmAudio = () => {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (Ctx && !audioCtxRef.current) {
+        audioCtxRef.current = new Ctx();
+      }
+      if (audioCtxRef.current?.state === 'suspended') {
+        audioCtxRef.current.resume();
+      }
+    };
+    document.addEventListener('click', warmAudio, { once: true });
+    return () => document.removeEventListener('click', warmAudio);
   }, []);
 
   function toggleBeepMuted() {
@@ -98,47 +115,67 @@ export default function ChatFab() {
     });
   }
 
-  async function playBeep() {
+  function getAudioCtx() {
+    if (!audioCtxRef.current) {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return null;
+      audioCtxRef.current = new Ctx();
+    }
+    if (audioCtxRef.current.state === 'suspended') audioCtxRef.current.resume();
+    return audioCtxRef.current;
+  }
+
+  function playBeep() {
     if (beepMuted) return;
     const now = Date.now();
     if (now - (beepCooldownRef.current || 0) < 700) return;
     beepCooldownRef.current = now;
 
     try {
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
-      const ctx = new Ctx();
+      const ctx = getAudioCtx();
+      if (!ctx) return;
 
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sine';
       osc.frequency.value = 880;
-      gain.gain.value = 0.03;
+      gain.gain.value = 0.15;
 
       osc.connect(gain);
       gain.connect(ctx.destination);
 
       osc.start();
-      osc.stop(ctx.currentTime + 0.08);
-
-      osc.onended = () => {
-        try { ctx.close(); } catch {
-          // ignore
-        }
-      };
+      osc.stop(ctx.currentTime + 0.12);
     } catch {
       // ignore
     }
   }
 
   useEffect(() => {
+    if (socketConnected) {
+      if (chatOpen) {
+        socketEmit('chat:focus');
+      } else {
+        socketEmit('chat:blur');
+      }
+    }
+  }, [chatOpen, socketConnected, socketEmit]);
+
+  useEffect(() => {
     if (!chatOpen) return;
     setError('');
     setInput('');
     setUnseenCount(0);
+    setShowScrollBtn(false);
     const last = messages && messages.length ? messages[messages.length - 1] : null;
     const lastId = last && last.id != null ? String(last.id) : null;
     if (lastId) lastProcessedMessageIdRef.current = lastId;
+    // Scroll to bottom on open
+    setTimeout(() => {
+      if (bottomRef.current) {
+        bottomRef.current.scrollIntoView({ block: 'end' });
+      }
+    }, 50);
   }, [chatOpen, isAdmin, setError]);
 
   useEffect(() => {
@@ -151,21 +188,33 @@ export default function ChatFab() {
 
     lastProcessedMessageIdRef.current = lastId;
 
-    if (chatOpen) return;
-
-    const myRole = role || (isAdmin ? 'admin' : 'user');
-    const senderRole = getRole(last);
-    if (senderRole && senderRole !== myRole) {
-      setUnseenCount((c) => Math.min(99, (c || 0) + 1));
-      playBeep();
+    if (chatOpen) {
+      // Auto-scroll to newest message when chat is open
+      setTimeout(() => {
+        if (bottomRef.current) bottomRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }, 50);
+    } else {
+      const myRole = role || (isAdmin ? 'admin' : 'user');
+      const senderRole = getRole(last);
+      if (senderRole && senderRole !== myRole) {
+        setUnseenCount((c) => Math.min(99, (c || 0) + 1));
+        playBeep();
+      }
     }
   }, [chatOpen, isAdmin, messages, role, beepMuted]);
 
-  useEffect(() => {
-    if (!chatOpen) return;
-    if (!bottomRef.current) return;
-    bottomRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [chatOpen, messages.length]);
+  // Scroll detection for showing "scroll to bottom" button
+  const handleScroll = useCallback((e) => {
+    const el = e.target;
+    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+    setShowScrollBtn(!isNearBottom);
+  }, []);
+
+  const scrollToBottom = useCallback(() => {
+    if (bottomRef.current) {
+      bottomRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+  }, []);
 
   function extractFirstInternalServiceUrl(text) {
     if (!text) return null;
@@ -261,6 +310,9 @@ export default function ChatFab() {
     setError('');
     setInput('');
     sendMessage({ message_type: 'text', message: text });
+    setTimeout(() => {
+      if (bottomRef.current) bottomRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }, 100);
   }
 
   async function handleUploadFile(file) {
@@ -295,6 +347,9 @@ export default function ChatFab() {
         message_type: 'media',
         message: { url: data.url, mime: data.mime, kind: data.kind },
       });
+      setTimeout(() => {
+        if (bottomRef.current) bottomRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }, 100);
     } catch (e) {
       setError(e?.message || 'Upload failed');
     } finally {
@@ -305,20 +360,21 @@ export default function ChatFab() {
 
   return (
     <div ref={containerRef} className="fixed bottom-5 right-5 z-[1000]">
+      <div className="fixed inset-0 pointer-events-none" style={{ background: 'radial-gradient(circle at top, rgba(249, 115, 22, 0.08), transparent 45%)' }} />
       {chatOpen && (
-        <div className="mb-3 w-[360px] max-w-[90vw] rounded-3xl border border-white/10 bg-gradient-to-b from-[#0b0b0b]/95 to-[#050505]/95 backdrop-blur-2xl shadow-[0_30px_90px_rgba(0,0,0,0.75)] overflow-hidden">
-          <div className="relative px-5 py-4 border-b border-white/10">
+        <div className="mb-3 w-[420px] sm:w-[480px] max-w-[92vw] h-[520px] max-h-[80vh] rounded-[16px] border border-white/[0.08] bg-white/[0.04] backdrop-blur-[14px] shadow-[0_30px_90px_rgba(0,0,0,0.75)] overflow-hidden flex flex-col">
+          <div className="relative px-[14px] py-3 border-b border-white/[0.08]">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(249,115,22,0.15),transparent_60%)]" />
             <div className="relative flex items-center justify-between">
               <div className="flex flex-col">
-                <div className="text-sm font-bold text-white">Chat with Admin</div>
+                <div className="text-[14px] font-black uppercase tracking-[0.12em] text-orange-500/85">Chat with Admin</div>
               </div>
 
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={toggleBeepMuted}
-                  className="h-9 w-9 rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] text-gray-300 hover:text-white transition-all flex items-center justify-center"
+                  className="h-9 w-9 rounded-[10px] border border-white/[0.08] bg-white/[0.04] hover:border-orange-500/35 text-gray-300 hover:text-white transition-all flex items-center justify-center"
                   aria-label={beepMuted ? 'Unmute notifications' : 'Mute notifications'}
                   title={beepMuted ? 'Unmute notifications' : 'Mute notifications'}
                 >
@@ -328,7 +384,7 @@ export default function ChatFab() {
                 <button
                   type="button"
                   onClick={() => setChatOpen(false)}
-                  className="h-9 w-9 rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] text-gray-300 hover:text-white transition-all flex items-center justify-center"
+                  className="h-9 w-9 rounded-[10px] border border-white/[0.08] bg-white/[0.04] hover:border-orange-500/35 text-gray-300 hover:text-white transition-all flex items-center justify-center"
                   aria-label="Close"
                 >
                   <X className="h-4 w-4" />
@@ -337,9 +393,16 @@ export default function ChatFab() {
             </div>
           </div>
 
-          <div className="h-[360px] px-4 py-4 overflow-y-auto overflow-x-hidden">
+          <div
+            className="flex-1 px-3 py-3 overflow-y-auto overflow-x-hidden bg-[#0b0b0b]"
+            onScroll={handleScroll}
+            style={{
+              scrollbarWidth: 'thin',
+              scrollbarColor: 'rgba(249, 115, 22, 0.4) transparent',
+            }}
+          >
             {busy && messages.length === 0 && (
-              <div className="text-sm text-slate-500 px-1">Loading...</div>
+              <div className="text-xs text-gray-400 px-1">Loading...</div>
             )}
             {error && (
               <div className="text-xs text-red-400 px-1 mb-3">{error}</div>
@@ -356,16 +419,28 @@ export default function ChatFab() {
                 const mediaKind = getMediaKind(m);
                 const internalPath = type === 'text' ? extractFirstInternalServiceUrl(text) : null;
 
+                if (senderRole === 'system') {
+                  return (
+                    <div key={m?.id ?? `m-${idx}`} className="flex justify-center">
+                      <div className="max-w-[90%] px-4 py-2.5 text-[11px] leading-relaxed text-center rounded-2xl bg-white/[0.04] border border-white/[0.06] text-gray-400 whitespace-pre-wrap break-words [word-break:break-word]">
+                        {text || '...'}
+                        <div className="text-[9px] text-gray-600 mt-1">
+                          {m?.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
                 return (
                   <div key={m?.id ?? `m-${idx}`} className={`flex min-w-0 ${mine ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-[85%] min-w-0 ${mine ? 'items-end' : 'items-start'} flex flex-col gap-2`}>
                       {type === 'media' && mediaUrl ? (
                         <div
-                          className={`rounded-3xl overflow-hidden border ${
-                            mine
-                              ? 'border-orange-500/25 bg-orange-500/10'
-                              : 'border-white/10 bg-white/[0.03]'
-                          } shadow-[0_20px_50px_rgba(0,0,0,0.35)]`}
+                          className={`rounded-[18px] overflow-hidden border ${mine
+                            ? 'border-orange-500/35 bg-orange-500/15'
+                            : 'border-white/[0.08] bg-white/[0.03]'
+                            }`}
                         >
                           {mediaKind === 'video' ? (
                             <video src={mediaUrl} controls className="max-w-[280px] w-full h-auto" />
@@ -386,18 +461,17 @@ export default function ChatFab() {
 
                       {type === 'text' && !internalPath ? (
                         <div
-                          className={`px-4 py-3 text-[13px] leading-relaxed rounded-3xl border w-fit max-w-full min-w-0 whitespace-pre-wrap break-words [word-break:break-word] ${
-                            mine
-                              ? 'bg-orange-500/10 border-orange-500/25 text-white'
-                              : 'bg-white/[0.03] border-white/10 text-gray-100'
-                          }`}
+                          className={`px-[12px] py-[10px] text-[13px] leading-relaxed rounded-[18px] border w-fit max-w-full min-w-0 whitespace-pre-wrap break-words [word-break:break-word] ${mine
+                            ? 'bg-orange-500/15 border-orange-500/35 text-white'
+                            : 'bg-white/[0.03] border-white/[0.08] text-gray-100'
+                            }`}
                         >
                           {text || '...'}
+                          <div className={`text-[10px] text-gray-500 mt-1 ${mine ? 'text-right' : 'text-left'}`}>
+                            {m?.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                            {mine && m?.id ? <span className="ml-2">{m?.is_seen ? 'Seen' : ''}</span> : null}
+                          </div>
                         </div>
-                      ) : null}
-
-                      {mine && m?.id ? (
-                        <div className="text-[10px] text-gray-500 px-1">{m?.is_seen ? 'Seen' : ''}</div>
                       ) : null}
                     </div>
                   </div>
@@ -405,10 +479,21 @@ export default function ChatFab() {
               })}
               <div ref={bottomRef} />
             </div>
+
+            {/* Scroll to bottom button */}
+            {showScrollBtn && (
+              <button
+                onClick={scrollToBottom}
+                className="absolute bottom-20 left-1/2 -translate-x-1/2 h-8 px-3 rounded-full border border-white/[0.08] bg-white/[0.08] hover:bg-white/[0.12] text-white text-xs font-medium flex items-center gap-1 transition-all shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
+              >
+                <ChevronDown className="h-3 w-3" />
+                New messages
+              </button>
+            )}
           </div>
 
-          <div className="px-4 pb-4">
-            <div className="flex items-end gap-2 rounded-3xl border border-white/10 bg-white/[0.03] p-2">
+          <div className="px-3 pb-3 bg-[#0b0b0b] border-t border-white/[0.08] shrink-0">
+            <div className="flex items-end gap-2 pt-3">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -421,7 +506,7 @@ export default function ChatFab() {
                 type="button"
                 onClick={() => fileInputRef.current && fileInputRef.current.click()}
                 disabled={!isAuthed || uploading}
-                className="h-10 w-10 rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-all"
+                className="h-10 w-10 rounded-[10px] border border-white/[0.08] bg-white/[0.04] hover:border-orange-500/35 text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-all shrink-0"
                 aria-label="Attach"
               >
                 <Paperclip className="h-4 w-4" />
@@ -429,14 +514,19 @@ export default function ChatFab() {
 
               <div className="flex-1">
                 <input
+                  ref={textareaRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleSend();
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSend();
+                    }
                   }}
-                  placeholder={uploading ? 'Uploading...' : 'Type your message'}
+                  placeholder={uploading ? 'Uploading...' : 'Type a message...'}
                   disabled={uploading}
-                  className="w-full h-10 px-3 rounded-2xl bg-transparent text-gray-100 placeholder:text-gray-600 outline-none"
+                  type="text"
+                  className="w-full h-[40px] px-4 py-2 rounded-[12px] bg-black/25 border border-white/[0.08] text-gray-100 placeholder:text-gray-500 outline-none focus:border-orange-500/35"
                 />
               </div>
 
@@ -444,7 +534,7 @@ export default function ChatFab() {
                 type="button"
                 onClick={handleSend}
                 disabled={!isAuthed || uploading}
-                className="h-10 w-10 rounded-2xl border border-orange-500/25 bg-orange-500/10 hover:bg-orange-500/20 hover:border-orange-500/40 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-all"
+                className="h-10 w-10 rounded-[10px] border border-orange-500/35 bg-orange-500/15 hover:bg-orange-500/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-all shrink-0"
                 aria-label="Send"
               >
                 <SendHorizonal className="h-4 w-4 text-orange-300" />
@@ -463,13 +553,13 @@ export default function ChatFab() {
           }
           setChatOpen((v) => !v);
         }}
-        className="relative h-14 w-14 rounded-full border border-white/10 bg-gradient-to-b from-orange-500/25 to-orange-500/10 backdrop-blur-2xl shadow-[0_30px_80px_rgba(0,0,0,0.75)] flex items-center justify-center hover:from-orange-500/35 hover:to-orange-500/15 transition-all"
+        className="relative h-14 w-14 rounded-[14px] border border-white/[0.08] bg-white/[0.04] backdrop-blur-[14px] flex items-center justify-center hover:border-orange-500/35 hover:bg-orange-500/10 transition-all shadow-[0_20px_60px_rgba(0,0,0,0.6)]"
         aria-label="Open chat"
       >
-        <MessageCircle className="h-6 w-6 text-orange-300" />
+        <MessageCircle className="h-6 w-6 text-orange-400" />
 
         {unseenCount > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] leading-[18px] font-extrabold text-center shadow-[0_6px_20px_rgba(0,0,0,0.45)]">
+          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-[6px] rounded-full bg-red-500 text-white text-[10px] font-black flex items-center justify-center shadow-[0_6px_20px_rgba(0,0,0,0.45)]">
             {unseenCount >= 99 ? '99' : unseenCount}
           </span>
         )}
@@ -496,9 +586,8 @@ function ProductCard({ mine, servicePath, fetcher, fallbackText }) {
   if (!card) {
     return (
       <div
-        className={`px-4 py-3 text-[13px] leading-relaxed rounded-3xl border ${
-          mine ? 'bg-orange-500/10 border-orange-500/25 text-white' : 'bg-white/[0.03] border-white/10 text-gray-100'
-        }`}
+        className={`px-[12px] py-[10px] text-[13px] leading-relaxed rounded-[18px] border ${mine ? 'bg-orange-500/15 border-orange-500/35 text-white' : 'bg-white/[0.03] border-white/[0.08] text-gray-100'
+          }`}
       >
         {fallbackText || '...'}
       </div>
@@ -508,12 +597,11 @@ function ProductCard({ mine, servicePath, fetcher, fallbackText }) {
   return (
     <Link
       href={card.href}
-      className={`block rounded-3xl overflow-hidden border shadow-[0_20px_50px_rgba(0,0,0,0.35)] transition-all hover:-translate-y-[1px] ${
-        mine ? 'border-orange-500/25 bg-orange-500/10' : 'border-white/10 bg-white/[0.03]'
-      }`}
+      className={`block rounded-[18px] overflow-hidden border transition-all hover:-translate-y-[1px] ${mine ? 'border-orange-500/35 bg-orange-500/15' : 'border-white/[0.08] bg-white/[0.03]'
+        }`}
     >
       <div className="flex gap-3 p-3">
-        <div className="h-16 w-16 rounded-2xl overflow-hidden border border-white/10 bg-black/40 flex-shrink-0">
+        <div className="h-16 w-16 rounded-[14px] overflow-hidden border border-white/[0.08] bg-black/40 flex-shrink-0">
           {card.thumbnail ? (
             <img src={card.thumbnail} alt="thumb" className="h-full w-full object-cover" />
           ) : (

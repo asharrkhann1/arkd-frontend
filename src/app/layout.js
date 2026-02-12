@@ -34,25 +34,41 @@ async function getInitialData(cookieHeader) {
   const currencyRateData = await currencyRateResponse.json();
 
   let wishlistItems = [];
-  try {
-    if (headers) {
+  let pendingOrders = [];
+
+  if (headers) {
+    // Fetch initial wishlist
+    try {
       const wlRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/wishlist/me`, {
         cache: "no-store",
         headers
       });
-
       if (wlRes.ok) {
         const wlData = await wlRes.json();
         const items = wlData && typeof wlData === 'object' ? wlData.items : null;
         wishlistItems = Array.isArray(items) ? items : [];
       }
+    } catch (error) {
+      console.error("Failed to fetch initial wishlist:", error);
     }
-  } catch (error) {
-    console.error("Failed to fetch initial wishlist:", error);
-    wishlistItems = [];
+
+    // Fetch initial pending orders
+    try {
+      const ordersRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/orders/me`, {
+        cache: "no-store",
+        headers
+      });
+      if (ordersRes.ok) {
+        const ordersData = await ordersRes.json();
+        const ordersList = ordersData && ordersData.orders ? ordersData.orders : (Array.isArray(ordersData) ? ordersData : []);
+        pendingOrders = ordersList.filter(order => order.status !== 'delivered' && order.status !== 'completed');
+      }
+    } catch (error) {
+      console.error("Failed to fetch initial pending orders:", error);
+    }
   }
 
-  return { serviceData, currencyRateData, wishlistItems };
+  return { serviceData, currencyRateData, wishlistItems, pendingOrders };
 }
 
 
@@ -60,7 +76,7 @@ export default async function RootLayout({ children }) {
   const cookieStore = await cookies();
   const cookieHeader = cookieStore.getAll().map((c) => `${c.name}=${c.value}`).join('; ');
 
-  const { serviceData, currencyRateData, wishlistItems } = await getInitialData(cookieHeader);
+  const { serviceData, currencyRateData, wishlistItems, pendingOrders } = await getInitialData(cookieHeader);
 
 
   let services = serviceData.services ? serviceData.services : [];
@@ -81,7 +97,7 @@ export default async function RootLayout({ children }) {
             <SocketProvider>
               <CurrencyProvider initialRates={currencyRates}>
                 <WishlistProvider initialWishlist={wishlistItems}>
-                  <Navbar />
+                  <Navbar initialPendingOrders={pendingOrders} />
                   <Toaster position="top-right" toastOptions={{
                     style: {
                       // background: '#333',

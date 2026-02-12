@@ -36,7 +36,7 @@ import { useCurrency } from '@/contexts/CurrencyContext';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { apiFetch } from '@/lib/api';
 
-const Navbar = () => {
+const Navbar = ({ initialPendingOrders = [] }) => {
     const { user, loading, logout } = useAuth();
     const { services } = useData();
     const { wishlist } = useWishlist();
@@ -48,7 +48,7 @@ const Navbar = () => {
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const [currencyMenuOpen, setCurrencyMenuOpen] = useState(false); // Only for Desktop Currency
     const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
-    const [pendingOrders, setPendingOrders] = useState([]);
+    const [pendingOrders, setPendingOrders] = useState(initialPendingOrders);
 
     // Mobile Accordion States
     const [servicesMenuOpen, setServicesMenuOpen] = useState(false);
@@ -275,8 +275,8 @@ const Navbar = () => {
                                                                     </p>
                                                                     <div className="flex items-center gap-2 mt-2">
                                                                         <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-full ${order.status === 'pending' ? 'bg-orange-500/10 text-orange-500' :
-                                                                                order.status === 'processing' ? 'bg-blue-500/10 text-blue-500' :
-                                                                                    'bg-gray-500/10 text-gray-500'
+                                                                            order.status === 'processing' ? 'bg-blue-500/10 text-blue-500' :
+                                                                                'bg-gray-500/10 text-gray-500'
                                                                             }`}>
                                                                             {order.status}
                                                                         </span>

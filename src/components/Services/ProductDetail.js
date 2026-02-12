@@ -17,7 +17,9 @@ import {
     Wallet,
     Heart,
     Check,
-    X
+    X,
+    Minus,
+    Plus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
@@ -25,14 +27,20 @@ import { useCurrency } from '@/contexts/CurrencyContext';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
-import { apiFetch } from '@/lib/api';
+import { useRouter } from 'next/navigation';
 
 export default function ProductDetail({ product, type, category }) {
     const { formatPrice, selectedCurrency } = useCurrency();
     const { user, refreshMe } = useAuth();
+    const router = useRouter();
     const { isInWishlist, toggleWishlist } = useWishlist();
     const [isToggling, setIsToggling] = useState(false);
     const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+    const [selectedQuantity, setSelectedQuantity] = useState(1);
+
+    const maxQuantity = product.stock_mode === 'limited'
+        ? (product.quantity_available || 1)
+        : 99;
 
     // Image handling
     const images = useMemo(() => {
@@ -187,6 +195,36 @@ export default function ProductDetail({ product, type, category }) {
                                     </div>
                                 </div>
 
+                                {/* Quantity Selector */}
+                                <div className="flex items-center justify-between p-4 bg-white/[0.03] rounded-2xl border border-white/5">
+                                    <span className="text-[11px] font-black uppercase tracking-widest text-gray-400">Quantity</span>
+                                    <div className="flex items-center gap-3">
+                                        <button
+                                            onClick={() => setSelectedQuantity(q => Math.max(1, q - 1))}
+                                            disabled={selectedQuantity <= 1}
+                                            className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                                        >
+                                            <Minus className="w-4 h-4" />
+                                        </button>
+                                        <span className="w-10 text-center font-black text-xl">{selectedQuantity}</span>
+                                        <button
+                                            onClick={() => setSelectedQuantity(q => Math.min(maxQuantity, q + 1))}
+                                            disabled={selectedQuantity >= maxQuantity}
+                                            className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                                        >
+                                            <Plus className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                                {selectedQuantity > 1 && (
+                                    <div className="flex items-baseline justify-between px-2">
+                                        <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Total</span>
+                                        <span className="text-2xl font-black italic text-orange-500 tracking-tighter">
+                                            {formatPrice(Number(product.price) * selectedQuantity)}
+                                        </span>
+                                    </div>
+                                )}
+
                                 {/* Purchase Buttons */}
                                 <div className="grid gap-4">
                                     <button
@@ -260,16 +298,23 @@ export default function ProductDetail({ product, type, category }) {
                 user={user}
                 formatPrice={formatPrice}
                 refreshAuth={refreshMe}
+                initialQuantity={selectedQuantity}
+                onSuccess={() => router.push('/orders')}
             />
         </div>
     );
 }
 
-function OrderConfirmationModal({ isOpen, onClose, product, user, formatPrice, refreshAuth }) {
+function OrderConfirmationModal({ isOpen, onClose, product, user, formatPrice, refreshAuth, initialQuantity = 1, onSuccess }) {
     const [step, setStep] = useState('summary');
     const [selectedAddons, setSelectedAddons] = useState({});
+    const [quantity, setQuantity] = useState(initialQuantity);
     const [termsAccepted, setTermsAccepted] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
+
+    const maxQuantity = product.stock_mode === 'limited'
+        ? (product.quantity_available || 1)
+        : 99;
 
     // Initialize step and default options
     useEffect(() => {
@@ -277,6 +322,7 @@ function OrderConfirmationModal({ isOpen, onClose, product, user, formatPrice, r
             const hasAddons = product.addons && Object.keys(product.addons).length > 0;
 
             setStep(hasAddons ? 'addons' : 'summary');
+            setQuantity(initialQuantity);
             setTermsAccepted(false);
             setIsProcessing(false);
 
@@ -301,7 +347,8 @@ function OrderConfirmationModal({ isOpen, onClose, product, user, formatPrice, r
         try {
             const payload = {
                 product_id: product.id,
-                quantity: 1,
+                quantity,
+                terms_and_agreed_checked: true,
                 addons: selectedAddons
             };
 
@@ -313,6 +360,7 @@ function OrderConfirmationModal({ isOpen, onClose, product, user, formatPrice, r
             toast.success('Order placed successfully!');
             if (refreshAuth) await refreshAuth();
             onClose();
+            if (onSuccess) onSuccess();
         } catch (error) {
             console.error(error);
             toast.error(error.message || 'Failed to place order');
@@ -330,11 +378,13 @@ function OrderConfirmationModal({ isOpen, onClose, product, user, formatPrice, r
         });
     }, [product.addons, selectedAddons]);
 
-    const totalPrice = useMemo(() => {
+    const unitPrice = useMemo(() => {
         const base = Number(product.price) || 0;
         const addonsTotal = addonsList.reduce((acc, curr) => acc + (Number(curr.price) || 0), 0);
         return base + addonsTotal;
     }, [product.price, addonsList]);
+
+    const totalPrice = unitPrice * quantity;
 
     if (!isOpen) return null;
 
@@ -448,9 +498,44 @@ function OrderConfirmationModal({ isOpen, onClose, product, user, formatPrice, r
                                         </div>
                                     )}
 
-                                    <div className="pt-4 border-t border-white/5 flex justify-between items-center text-orange-500">
-                                        <span className="font-black uppercase tracking-widest text-sm">Total</span>
-                                        <span className="font-black text-2xl">{formatPrice(totalPrice)}</span>
+                                    {/* Quantity Selector */}
+                                    <div className="flex justify-between items-center pt-4 border-t border-white/5">
+                                        <span className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Quantity</span>
+                                        <div className="flex items-center gap-3">
+                                            <button
+                                                onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                                                disabled={quantity <= 1 || isProcessing}
+                                                className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                                            >
+                                                <Minus className="w-4 h-4" />
+                                            </button>
+                                            <span className="w-10 text-center font-black text-lg">{quantity}</span>
+                                            <button
+                                                onClick={() => setQuantity(q => Math.min(maxQuantity, q + 1))}
+                                                disabled={quantity >= maxQuantity || isProcessing}
+                                                className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                                            >
+                                                <Plus className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {product.stock_mode === 'limited' && (
+                                        <p className="text-[9px] font-bold text-gray-600 uppercase tracking-widest text-right">
+                                            {product.quantity_available} available
+                                        </p>
+                                    )}
+
+                                    <div className="pt-4 border-t border-white/5 space-y-1">
+                                        {quantity > 1 && (
+                                            <div className="flex justify-between items-center text-gray-500 text-xs">
+                                                <span className="font-bold uppercase tracking-widest">Unit Price</span>
+                                                <span className="font-black">{formatPrice(unitPrice)}</span>
+                                            </div>
+                                        )}
+                                        <div className="flex justify-between items-center text-orange-500">
+                                            <span className="font-black uppercase tracking-widest text-sm">Total</span>
+                                            <span className="font-black text-2xl">{formatPrice(totalPrice)}</span>
+                                        </div>
                                     </div>
                                 </div>
 

@@ -19,9 +19,10 @@ export default function PresenceTracker() {
 
     function emitState(state) {
       if (!state) return;
+      const tabFocused = !document.hidden;
       if (lastStateRef.current === state) return;
       lastStateRef.current = state;
-      emit('presence:state', { state });
+      emit('presence:state', { state, tabFocused });
     }
 
     function setIdleTimer() {
@@ -64,7 +65,7 @@ export default function PresenceTracker() {
 
     heartbeatRef.current = setInterval(() => {
       const state = document.hidden ? 'idle' : (lastStateRef.current || 'online');
-      emit('presence:heartbeat', { state });
+      emit('presence:heartbeat', { state, tabFocused: !document.hidden });
     }, HEARTBEAT_MS);
 
     return () => {

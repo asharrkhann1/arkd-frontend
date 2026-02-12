@@ -157,20 +157,52 @@ export default function OrderDetailPage() {
                         </div>
 
                         {/* Order Details Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <div className="p-6 bg-white/[0.02] rounded-2xl border border-white/5">
-                                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-2">Amount Paid</h3>
-                                <p className="text-2xl font-black italic tracking-tight">{formatPrice(order.total_price || order.price)}</p>
+                                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-2">Unit Price</h3>
+                                <p className="text-2xl font-black italic tracking-tight">
+                                    {formatPrice(order.product_snapshot?.pricing?.unit_price || order.product_snapshot?.price || order.total_price)}
+                                </p>
                             </div>
                             <div className="p-6 bg-white/[0.02] rounded-2xl border border-white/5">
                                 <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-2">Quantity</h3>
-                                <p className="text-2xl font-black italic tracking-tight">{order.quantity || 1}</p>
+                                <p className="text-2xl font-black italic tracking-tight">{order.quantity || order.product_snapshot?.pricing?.quantity || 1}</p>
+                            </div>
+                            <div className="p-6 bg-white/[0.02] rounded-2xl border border-white/5">
+                                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-2">Total Paid</h3>
+                                <p className="text-2xl font-black italic tracking-tight text-orange-500">{formatPrice(order.total_price || order.price)}</p>
                             </div>
                             <div className="p-6 bg-white/[0.02] rounded-2xl border border-white/5">
                                 <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-2">Type</h3>
                                 <p className="text-xl font-bold text-gray-300 capitalize">{order.product_snapshot?.type || 'Digital Product'}</p>
                             </div>
                         </div>
+                        {/* Pricing Breakdown */}
+                        {order.product_snapshot?.pricing && (order.quantity > 1 || order.product_snapshot.pricing.addons_unit_total > 0) && (
+                            <div className="mt-4 p-6 bg-white/[0.02] rounded-2xl border border-white/5 space-y-3">
+                                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-3">Pricing Breakdown</h3>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-gray-400 font-bold">Base Price</span>
+                                    <span className="text-white font-black">{formatPrice(order.product_snapshot.pricing.base_unit_price)}</span>
+                                </div>
+                                {order.product_snapshot.pricing.addons_unit_total > 0 && (
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-400 font-bold">Addons</span>
+                                        <span className="text-white font-black">+{formatPrice(order.product_snapshot.pricing.addons_unit_total)}</span>
+                                    </div>
+                                )}
+                                {order.quantity > 1 && (
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-400 font-bold">Unit Price x {order.quantity}</span>
+                                        <span className="text-white font-black">{formatPrice(order.product_snapshot.pricing.unit_price)} x {order.quantity}</span>
+                                    </div>
+                                )}
+                                <div className="flex justify-between text-sm pt-3 border-t border-white/5">
+                                    <span className="text-gray-300 font-black uppercase tracking-widest text-xs">Total</span>
+                                    <span className="text-orange-500 font-black text-lg">{formatPrice(order.product_snapshot.pricing.total_price)}</span>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </motion.div>
 
