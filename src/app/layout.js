@@ -20,12 +20,40 @@ export const metadata = {
 async function getInitialData(cookieHeader) {
   const headers = cookieHeader ? { cookie: cookieHeader } : undefined;
 
+  // Fetch all services (general)
   const serviceResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/services`, {
     cache: "no-store",
     headers,
     credentials: "include"
   });
   const serviceData = await serviceResponse.json();
+
+  // Fetch specific service types in parallel
+  const [giftcardsRes, accountsRes] = await Promise.all([
+    fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/services/giftcards`, {
+      cache: "no-store",
+      headers,
+      credentials: "include"
+    }).catch(() => null),
+    fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/services/accounts`, {
+      cache: "no-store",
+      headers,
+      credentials: "include"
+    }).catch(() => null)
+  ]);
+
+  let giftcardsData = [];
+  let accountsData = [];
+
+  if (giftcardsRes && giftcardsRes.ok) {
+    const data = await giftcardsRes.json();
+    giftcardsData = data.services || data.items || data.data || [];
+  }
+
+  if (accountsRes && accountsRes.ok) {
+    const data = await accountsRes.json();
+    accountsData = data.services || data.items || data.data || [];
+  }
 
   const currencyRateResponse = await fetch(
     process.env.CURRENCY_RATE_API_URL,
@@ -35,6 +63,7 @@ async function getInitialData(cookieHeader) {
 
   let wishlistItems = [];
   let pendingOrders = [];
+  let orders = [];
 
   if (headers) {
     // Fetch initial wishlist
@@ -52,7 +81,7 @@ async function getInitialData(cookieHeader) {
       console.error("Failed to fetch initial wishlist:", error);
     }
 
-    // Fetch initial pending orders
+    // Fetch all user orders (not just pending)
     try {
       const ordersRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/orders/me`, {
         cache: "no-store",
@@ -60,15 +89,23 @@ async function getInitialData(cookieHeader) {
       });
       if (ordersRes.ok) {
         const ordersData = await ordersRes.json();
-        const ordersList = ordersData && ordersData.orders ? ordersData.orders : (Array.isArray(ordersData) ? ordersData : []);
-        pendingOrders = ordersList.filter(order => order.status !== 'delivered' && order.status !== 'completed');
+        orders = ordersData && ordersData.orders ? ordersData.orders : (Array.isArray(ordersData) ? ordersData : []);
+        pendingOrders = orders.filter(order => order.status !== 'delivered' && order.status !== 'completed');
       }
     } catch (error) {
-      console.error("Failed to fetch initial pending orders:", error);
+      console.error("Failed to fetch initial orders:", error);
     }
   }
 
-  return { serviceData, currencyRateData, wishlistItems, pendingOrders };
+  return { 
+    serviceData, 
+    currencyRateData, 
+    wishlistItems, 
+    pendingOrders,
+    orders,
+    giftcardsData,
+    accountsData
+  };
 }
 
 
@@ -76,15 +113,45 @@ export default async function RootLayout({ children }) {
   const cookieStore = await cookies();
   const cookieHeader = cookieStore.getAll().map((c) => `${c.name}=${c.value}`).join('; ');
 
-  const { serviceData, currencyRateData, wishlistItems, pendingOrders } = await getInitialData(cookieHeader);
+  const { serviceData, currencyRateData, wishlistItems, pendingOrders, orders, giftcardsData, accountsData } = await getInitialData(cookieHeader);
 
 
   let services = serviceData.services ? serviceData.services : [];
   let currencyRates = currencyRateData ? currencyRateData : {};
 
+  // Fetch categories for each active service (for FeaturedCategories on homepage)
+  let serviceCategories = {};
+  if (services.length > 0) {
+    const categoryPromises = services.map(async (svc) => {
+      const type = typeof svc === 'string' ? svc : svc.type;
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/services/${type}`, {
+          cache: "no-store",
+          headers: cookieHeader ? { cookie: cookieHeader } : undefined,
+          credentials: "include"
+        });
+        if (res.ok) {
+          const data = await res.json();
+          return { type, categories: data.categories || [] };
+        }
+      } catch (e) {
+        // ignore
+      }
+      return { type, categories: [] };
+    });
+    const categoryResults = await Promise.all(categoryPromises);
+    categoryResults.forEach(({ type, categories }) => {
+      serviceCategories[type] = categories;
+    });
+  }
+
   let data = {
     services,
-    currencyRates
+    currencyRates,
+    orders,
+    giftcards: giftcardsData,
+    accounts: accountsData,
+    serviceCategories
   }
 
   return (

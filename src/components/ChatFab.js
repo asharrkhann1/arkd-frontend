@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { MessageCircle, Paperclip, SendHorizonal, Volume2, VolumeX, X, ChevronDown } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSocket } from '@/contexts/SocketContext';
 import { useSocketChat } from '@/lib/useSocketChat';
@@ -81,6 +82,12 @@ export default function ChatFab() {
   useEffect(() => {
     setChatOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    const openHandler = () => setChatOpen(true);
+    window.addEventListener('open-chat', openHandler);
+    return () => window.removeEventListener('open-chat', openHandler);
+  }, []);
 
   useEffect(() => {
     try {
@@ -359,7 +366,7 @@ export default function ChatFab() {
   }
 
   return (
-    <div ref={containerRef} className="fixed bottom-5 right-5 z-[1000]">
+    <div ref={containerRef} className="fixed bottom-5 right-5 z-[1000] flex flex-col items-end">
       <div className="fixed inset-0 pointer-events-none" style={{ background: 'radial-gradient(circle at top, rgba(249, 115, 22, 0.08), transparent 45%)' }} />
       {chatOpen && (
         <div className="mb-3 w-[420px] sm:w-[480px] max-w-[92vw] h-[520px] max-h-[80vh] rounded-[16px] border border-white/[0.08] bg-white/[0.04] backdrop-blur-[14px] shadow-[0_30px_90px_rgba(0,0,0,0.75)] overflow-hidden flex flex-col">
@@ -548,7 +555,7 @@ export default function ChatFab() {
         type="button"
         onClick={() => {
           if (!isAuthed) {
-            setError('Login required');
+            toast.error('Please login first to start a chat');
             return;
           }
           setChatOpen((v) => !v);

@@ -9,8 +9,9 @@ export const slides = [
         ctaLink: '/services/accounts',
         accentColor: 'from-orange-600 to-orange-400',
         icon: User,
-        image: 'https://placehold.co/600x400',
+        image: '/pages-backgrounds/valorant-bg-1.png',
         bgColor: 'from-black via-gray-900 to-black',
+        origins: ['valorant', 'gtav', 'fortnite', 'lol', 'osrs', 'roblox'],
     },
     {
         id: 2,
@@ -20,8 +21,9 @@ export const slides = [
         ctaLink: '/currency',
         accentColor: 'from-orange-600 to-orange-400',
         icon: Coins,
-        image: 'https://placehold.co/600x400',
+        image: '/pages-backgrounds/gtav-bg-1.png',
         bgColor: 'from-black via-gray-900 to-black',
+        origins: ['gtav', 'fortnite', 'lol', 'osrs', 'pokemon-go'],
     },
     {
         id: 3,
@@ -31,8 +33,9 @@ export const slides = [
         ctaLink: '/gift-cards',
         accentColor: 'from-orange-600 to-orange-400',
         icon: Gift,
-        image: 'https://placehold.co/600x400',
+        image: '/pages-backgrounds/fortnite-bg.jpg',
         bgColor: 'from-black via-gray-900 to-black',
+        origins: ['fortnite', 'roblox', 'clash'],
     },
     {
         id: 4,
@@ -42,7 +45,8 @@ export const slides = [
         ctaLink: '/items',
         accentColor: 'from-orange-600 to-orange-400',
         icon: Package,
-        image: 'https://placehold.co/600x400',
+        image: '/pages-backgrounds/lol-bg.png',
         bgColor: 'from-black via-gray-900 to-black',
+        origins: ['lol', 'valorant', 'osrs', 'clash'],
     },
 ];

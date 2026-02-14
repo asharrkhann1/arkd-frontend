@@ -1,45 +1,37 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { apiFetch } from '@/lib/api';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { Loader2, Package, Clock, ChevronRight, Search, Filter } from 'lucide-react';
+import { Loader2, Package, ChevronRight, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { apiFetch } from '@/lib/api';
 
 export default function OrdersPage() {
     const { user, loading: authLoading } = useAuth();
     const { formatPrice } = useCurrency();
     const router = useRouter();
+    const [searchQuery, setSearchQuery] = useState('');
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [searchQuery, setSearchQuery] = useState('');
-
-    useEffect(() => {
-        if (!authLoading && !user) {
-            router.push('/login?next=/orders');
-        }
-    }, [user, authLoading, router]);
 
     useEffect(() => {
         if (!user) return;
-
+        
         const fetchOrders = async () => {
+            setLoading(true);
             try {
-                // Assuming endpoint to get user's orders
                 const data = await apiFetch('/orders/me');
-                // Adjust based on actual API response structure (data or data.orders)
-                const ordersList = Array.isArray(data) ? data : (data.orders || []);
-                setOrders(ordersList);
-            } catch (error) {
-                console.error('Failed to fetch orders:', error);
+                setOrders(data.orders || []);
+            } catch (err) {
+                console.error('Failed to fetch orders:', err);
             } finally {
                 setLoading(false);
             }
         };
-
+        
         fetchOrders();
     }, [user]);
 
@@ -48,7 +40,7 @@ export default function OrdersPage() {
         (order.product_snapshot?.title && order.product_snapshot.title.toLowerCase().includes(searchQuery.toLowerCase()))
     );
 
-    if (authLoading || (loading && user)) {
+    if (authLoading || loading) {
         return (
             <div className="min-h-screen bg-black flex items-center justify-center">
                 <Loader2 className="w-12 h-12 text-orange-500 animate-spin" />
@@ -56,7 +48,10 @@ export default function OrdersPage() {
         );
     }
 
-    if (!user) return null;
+    if (!user) {
+        router.push('/login?next=/orders');
+        return null;
+    }
 
     return (
         <div className="min-h-screen bg-black text-white py-12 px-4 sm:px-6 lg:px-8 font-sans">
@@ -119,14 +114,23 @@ export default function OrdersPage() {
                                         </div>
 
                                         {/* Status */}
-                                        <div className="px-4 py-2 rounded-xl bg-white/5 border border-white/5">
-                                            <span className={`text-[10px] font-black uppercase tracking-widest ${order.status === 'completed' ? 'text-green-500' :
-                                                order.status === 'pending' ? 'text-orange-500' :
-                                                    order.status === 'cancelled' ? 'text-red-500' :
-                                                        'text-gray-400'
-                                                }`}>
-                                                {order.status || 'Pending'}
-                                            </span>
+                                        <div className="flex flex-col items-end gap-1.5">
+                                            <div className="px-4 py-2 rounded-xl bg-white/5 border border-white/5">
+                                                <span className={`text-[10px] font-black uppercase tracking-widest ${order.status === 'delivered' ? 'text-green-500' :
+                                                    order.status === 'pending' ? 'text-orange-500' :
+                                                        order.status === 'cancelled' ? 'text-red-500' :
+                                                            'text-gray-400'
+                                                    }`}>
+                                                    {order.status || 'Pending'}
+                                                </span>
+                                            </div>
+                                            {order.commits && Array.isArray(order.commits) && order.commits.some(c => c.action === 'cancellation_requested' &&
+                                                !order.commits.some(c2 => (c2.action === 'cancellation_approved' || c2.action === 'cancellation_declined') && new Date(c2.at) > new Date(c.at))
+                                            ) && (
+                                                <span className="text-[9px] font-black uppercase tracking-widest text-yellow-500 px-2 py-1 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                                                    Cancel Pending
+                                                </span>
+                                            )}
                                         </div>
 
                                         {/* Price */}

@@ -26,7 +26,8 @@ import {
     Shield,
     Star,
     Menu,
-    Bell
+    Bell,
+    Flag
 } from 'lucide-react';
 import {
     serviceConfigs
@@ -34,11 +35,10 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { useWishlist } from '@/contexts/WishlistContext';
-import { apiFetch } from '@/lib/api';
 
 const Navbar = ({ initialPendingOrders = [] }) => {
     const { user, loading, logout } = useAuth();
-    const { services } = useData();
+    const { services, orders = [] } = useData();
     const { wishlist } = useWishlist();
     const { selectedCurrency, setSelectedCurrency, formatPrice, availableCurrencies } = useCurrency();
     const wishlistCount = wishlist.length;
@@ -46,16 +46,22 @@ const Navbar = ({ initialPendingOrders = [] }) => {
     const navigate = useRouter();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
-    const [currencyMenuOpen, setCurrencyMenuOpen] = useState(false); // Only for Desktop Currency
+    const [currencyMenuOpen, setCurrencyMenuOpen] = useState(false);
     const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
-    const [pendingOrders, setPendingOrders] = useState(initialPendingOrders);
+
+    // Derive pending orders from pre-fetched orders
+    const pendingOrders = user && orders.length > 0
+        ? orders.filter(order => order.status !== 'delivered' && order.status !== 'completed')
+        : [];
 
     // Mobile Accordion States
     const [servicesMenuOpen, setServicesMenuOpen] = useState(false);
-    const [mobileCurrencyOpen, setMobileCurrencyOpen] = useState(false); // For Mobile Currency Accordion
+    const [mobileCurrencyOpen, setMobileCurrencyOpen] = useState(false);
 
     const servicesRef = useRef(null);
     const currencyRef = useRef(null);
+    const userMenuRef = useRef(null);
+    const notificationRef = useRef(null);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -65,36 +71,17 @@ const Navbar = ({ initialPendingOrders = [] }) => {
             if (currencyRef.current && !currencyRef.current.contains(event.target)) {
                 setCurrencyMenuOpen(false);
             }
+            if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+                setUserMenuOpen(false);
+            }
+            if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+                setNotificationMenuOpen(false);
+            }
         };
 
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
-
-    // Fetch pending orders
-    useEffect(() => {
-        if (!user) {
-            setPendingOrders([]);
-            return;
-        }
-
-        const fetchPendingOrders = async () => {
-            try {
-                const data = await apiFetch('/orders/me');
-                const ordersList = Array.isArray(data) ? data : (data.orders || []);
-                // Filter for non-delivered orders
-                const pending = ordersList.filter(order => order.status !== 'delivered' && order.status !== 'completed');
-                setPendingOrders(pending);
-            } catch (error) {
-                console.error('Failed to fetch pending orders:', error);
-            }
-        };
-
-        fetchPendingOrders();
-        // Refresh every 30 seconds
-        const interval = setInterval(fetchPendingOrders, 30000);
-        return () => clearInterval(interval);
-    }, [user]);
 
     const handleLogout = () => {
         logout();
@@ -109,16 +96,16 @@ const Navbar = ({ initialPendingOrders = [] }) => {
     };
 
     return (
-        <header className="sticky top-0 z-50 bg-black/50 backdrop-blur-md shadow-lg">
+        <header className="sticky top-0 z-50 bg-gradient-to-b from-white/[0.08] to-white/[0.02] backdrop-blur-xl border-b border-white/[0.08] shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-16">
                     {/* Logo and Main Navigation */}
                     <div className="flex items-center space-x-6">
-                        <Link href="/" className="flex items-center space-x-2">
-                            <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
+                        <Link href="/" className="flex items-center space-x-2 group">
+                            <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(249,115,22,0.4)] group-hover:shadow-[0_0_20px_rgba(249,115,22,0.6)] transition-shadow">
                                 <span className="text-white font-bold text-sm">Ark</span>
                             </div>
-                            <span className="text-xl font-bold text-white">
+                            <span className="text-xl font-black text-white uppercase tracking-tight">
                                 ARKD
                             </span>
                         </Link>
@@ -147,14 +134,14 @@ const Navbar = ({ initialPendingOrders = [] }) => {
                                                 animate={{ opacity: 1 }}
                                                 exit={{ opacity: 0 }}
                                                 onClick={() => setServicesMenuOpen(false)}
-                                                className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 top-[64px]"
+                                                className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 top-[64px]"
                                             />
                                             <motion.div
                                                 initial={{ opacity: 0, y: -10 }}
                                                 animate={{ opacity: 1, y: 0 }}
                                                 exit={{ opacity: 0, y: -10 }}
                                                 transition={{ duration: 0.2 }}
-                                                className="fixed left-1/2 top-20 -translate-x-1/2 w-[95vw] max-w-[850px] bg-gray-900/95 backdrop-blur-xl border border-gray-700 rounded-2xl shadow-2xl z-50 overflow-hidden"
+                                                className="fixed left-1/2 top-20 -translate-x-1/2 w-[95vw] max-w-[850px] bg-gradient-to-b from-[#1a1a1f]/90 to-[#141419]/90 backdrop-blur-xl border border-white/[0.12] rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.5)] z-50 overflow-hidden"
                                             >
                                                 {/* Services Grid */}
                                                 <div className="grid grid-cols-3 gap-6 p-6">
@@ -167,38 +154,46 @@ const Navbar = ({ initialPendingOrders = [] }) => {
                                                             <Link
                                                                 key={type}
                                                                 href={config.href}
-                                                                className="group flex items-start space-x-3 p-3 rounded-xl hover:bg-gray-800/60 transition-all duration-200"
+                                                                className="group flex items-start space-x-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-orange-500/10 hover:border-orange-500/30 transition-all duration-200"
                                                                 onClick={() => setServicesMenuOpen(false)}
                                                             >
-                                                                <div className="p-2 bg-orange-900/20 rounded-lg group-hover:bg-orange-600/30 transition-colors border border-orange-900/30">
-                                                                    <Icon className="w-5 h-5 text-orange-500" />
+                                                                <div className={`p-2 bg-gradient-to-br ${config.color} rounded-lg bg-opacity-20 group-hover:scale-110 transition-transform`}>
+                                                                    <Icon className="w-5 h-5 text-white" />
                                                                 </div>
                                                                 <div>
-                                                                    <h3 className="text-white font-semibold group-hover:text-orange-500 transition-colors">{config.title}</h3>
-                                                                    <p className="text-xs text-gray-400">{config.description}</p>
+                                                                    <h3 className="text-white font-bold group-hover:text-orange-400 transition-colors">{config.title}</h3>
+                                                                    <p className="text-xs text-gray-500">{config.description}</p>
                                                                 </div>
                                                             </Link>
                                                         );
                                                     })}
                                                 </div>
 
-                                                {/* Bottom Bar - Feature Highlights */}
-                                                <div className="border-t border-gray-700 bg-gray-900/50 px-8 py-3">
+                                                {/* Premium Bottom Bar - Feature Highlights */}
+                                                <div className="border-t border-white/[0.08] bg-white/[0.02] px-8 py-4">
                                                     <div className="flex items-center justify-around">
                                                         <div className="flex items-center space-x-2 text-sm">
-                                                            <Zap className="w-4 h-4 text-orange-500 drop-shadow-[0_0_5px_rgba(220,38,38,0.5)]" />
+                                                            <div className="w-6 h-6 rounded-md bg-orange-500/20 flex items-center justify-center">
+                                                                <Zap className="w-3.5 h-3.5 text-orange-400" />
+                                                            </div>
                                                             <span className="text-gray-300 font-medium">Instant Delivery</span>
                                                         </div>
                                                         <div className="flex items-center space-x-2 text-sm">
-                                                            <Headphones className="w-4 h-4 text-orange-500 drop-shadow-[0_0_5px_rgba(220,38,38,0.5)]" />
+                                                            <div className="w-6 h-6 rounded-md bg-blue-500/20 flex items-center justify-center">
+                                                                <Headphones className="w-3.5 h-3.5 text-blue-400" />
+                                                            </div>
                                                             <span className="text-gray-300 font-medium">24/7 Support</span>
                                                         </div>
                                                         <div className="flex items-center space-x-2 text-sm">
-                                                            <Shield className="w-4 h-4 text-orange-500 drop-shadow-[0_0_5px_rgba(220,38,38,0.5)]" />
+                                                            <div className="w-6 h-6 rounded-md bg-green-500/20 flex items-center justify-center">
+                                                                <Shield className="w-3.5 h-3.5 text-green-400" />
+                                                            </div>
                                                             <span className="text-gray-300 font-medium">Free Warranty</span>
                                                         </div>
                                                         <div className="flex items-center space-x-2 text-sm">
-                                                            <Star className="w-4 h-4 text-orange-500 fill-orange-500" />
+                                                            <div className="w-6 h-6 rounded-md bg-purple-500/20 flex items-center justify-center">
+                                                                <Star className="w-3.5 h-3.5 text-purple-400" />
+                                                            </div>
                                                             <span className="text-gray-300 font-medium">+1.3M Reviews</span>
                                                         </div>
                                                     </div>
@@ -228,7 +223,7 @@ const Navbar = ({ initialPendingOrders = [] }) => {
 
                         {/* Desktop Notifications Bell */}
                         {user && (
-                            <div className="relative hidden md:block">
+                            <div className="relative hidden md:block" ref={notificationRef}>
                                 <button
                                     onClick={() => setNotificationMenuOpen(!notificationMenuOpen)}
                                     className="relative p-2 text-gray-300 hover:text-orange-500 transition-colors"
@@ -248,9 +243,9 @@ const Navbar = ({ initialPendingOrders = [] }) => {
                                             animate={{ opacity: 1, y: 0, scale: 1 }}
                                             exit={{ opacity: 0, y: -10, scale: 0.95 }}
                                             transition={{ duration: 0.2 }}
-                                            className="absolute right-0 mt-2 w-80 bg-gray-900/95 backdrop-blur-xl border border-gray-700 rounded-xl shadow-2xl z-50 overflow-hidden"
+                                            className="absolute right-0 mt-2 w-80 bg-gradient-to-b from-[#1a1a1f] to-[#141419] backdrop-blur-xl border border-white/[0.12] rounded-xl shadow-[0_0_40px_rgba(0,0,0,0.4)] z-50 overflow-hidden"
                                         >
-                                            <div className="p-4 border-b border-gray-700 bg-gray-800/20">
+                                            <div className="p-4 border-b border-white/[0.08] bg-white/[0.02]">
                                                 <h3 className="text-sm font-black uppercase tracking-widest text-white">Pending Orders</h3>
                                             </div>
                                             <div className="max-h-96 overflow-y-auto">
@@ -329,7 +324,7 @@ const Navbar = ({ initialPendingOrders = [] }) => {
                                         animate={{ opacity: 1, y: 0, scale: 1 }}
                                         exit={{ opacity: 0, y: -10, scale: 0.95 }}
                                         transition={{ duration: 0.2 }}
-                                        className="absolute right-0 mt-2 w-32 bg-gray-800/95 backdrop-blur-md border border-gray-600 rounded-lg shadow-xl z-50 overflow-hidden"
+                                        className="absolute right-0 mt-2 w-32 bg-gradient-to-b from-[#1a1a1f] to-[#141419] backdrop-blur-xl border border-white/[0.12] rounded-xl shadow-[0_0_40px_rgba(0,0,0,0.4)] z-50 overflow-hidden"
                                     >
                                         <div className="py-1">
                                             {availableCurrencies.map((currency) => (
@@ -337,8 +332,8 @@ const Navbar = ({ initialPendingOrders = [] }) => {
                                                     key={currency.code}
                                                     onClick={() => handleCurrencyChange(currency.code)}
                                                     className={`w-full flex items-center justify-between px-4 py-2 text-sm transition-colors ${selectedCurrency === currency.code
-                                                        ? 'bg-orange-500/10 text-orange-500'
-                                                        : 'text-gray-300 hover:bg-gray-700/50'
+                                                        ? 'bg-gradient-to-r from-orange-500/10 to-orange-600/10 text-orange-500'
+                                                        : 'text-gray-300 hover:bg-white/[0.03]'
                                                         }`}
                                                 >
                                                     <div className="flex items-center space-x-2">
@@ -360,7 +355,7 @@ const Navbar = ({ initialPendingOrders = [] }) => {
                                 <div className="w-8 h-8 rounded-full border-2 border-orange-500/20 border-t-orange-500 animate-spin" />
                             </div>
                         ) : user ? (
-                            <div className="relative">
+                            <div className="relative" ref={userMenuRef}>
                                 <button
                                     onClick={() => setUserMenuOpen(!userMenuOpen)}
                                     className="flex items-center space-x-2 p-2 text-gray-300 hover:text-orange-500 transition-colors"
@@ -383,14 +378,14 @@ const Navbar = ({ initialPendingOrders = [] }) => {
                                             initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                             animate={{ opacity: 1, y: 0, scale: 1 }}
                                             exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                            className="absolute right-0 mt-2 w-56 bg-gray-900/95 backdrop-blur-xl border border-gray-700 rounded-xl shadow-2xl z-50 overflow-hidden"
+                                            className="absolute right-0 mt-2 w-56 bg-gradient-to-b from-[#1a1a1f] to-[#141419] backdrop-blur-3xl border border-white/[0.12] rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.4)] z-50 overflow-hidden glassmorphism"
                                         >
-                                            <div className="p-4 border-b border-gray-700 bg-gray-800/20 space-y-3">
+                                            <div className="p-4 border-b border-white/[0.08] bg-white/[0.02] space-y-3">
                                                 <div className="flex flex-col">
                                                     <p className="text-sm font-bold text-white truncate">{user.username || user.name}</p>
                                                     <p className="text-[10px] text-gray-400 truncate uppercase tracking-widest">{user.email}</p>
                                                 </div>
-                                                <div className="flex items-center justify-between p-2.5 bg-orange-600/10 border border-orange-500/20 rounded-lg">
+                                                <div className="flex items-center justify-between p-2.5 bg-gradient-to-r from-orange-500/10 to-orange-600/10 border border-orange-500/20 rounded-lg glassmorphism">
                                                     <div className="flex items-center gap-2">
                                                         <Wallet className="w-3.5 h-3.5 text-orange-500" />
                                                         <span className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Balance</span>
@@ -415,6 +410,14 @@ const Navbar = ({ initialPendingOrders = [] }) => {
                                                 >
                                                     <Package className="w-4 h-4" />
                                                     <span>My Orders</span>
+                                                </Link>
+                                                <Link
+                                                    href="/ticket"
+                                                    className="flex items-center space-x-3 px-3 py-2 text-sm text-gray-300 hover:bg-orange-500/10 hover:text-orange-500 rounded-lg transition-colors"
+                                                    onClick={() => setUserMenuOpen(false)}
+                                                >
+                                                    <Flag className="w-4 h-4" />
+                                                    <span>My Disputes</span>
                                                 </Link>
                                                 <Link
                                                     href="/profile"
@@ -613,6 +616,14 @@ const Navbar = ({ initialPendingOrders = [] }) => {
                                                 >
                                                     <Package className="w-4 h-4" />
                                                     <span>Orders</span>
+                                                </Link>
+                                                <Link
+                                                    href="/ticket"
+                                                    className="flex items-center justify-center space-x-2 bg-gray-800 p-2.5 rounded-lg text-sm text-gray-300"
+                                                    onClick={() => setMobileMenuOpen(false)}
+                                                >
+                                                    <Flag className="w-4 h-4" />
+                                                    <span>Disputes</span>
                                                 </Link>
                                                 <Link
                                                     href="/profile"

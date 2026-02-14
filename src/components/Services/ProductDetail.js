@@ -28,6 +28,7 @@ import { useWishlist } from '@/contexts/WishlistContext';
 import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
+import { apiFetch } from '@/lib/api';
 
 export default function ProductDetail({ product, type, category }) {
     const { formatPrice, selectedCurrency } = useCurrency();

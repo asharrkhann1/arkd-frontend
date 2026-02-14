@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { MousePointer2, ShieldCheck, PlayCircle, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -38,8 +38,51 @@ const steps = [
     }
 ];
 
+const CYCLE_MS = 4000;
+
 const FeaturesSection = () => {
     const [activeStep, setActiveStep] = useState(0);
+    const [progress, setProgress] = useState(0);
+    const timerRef = useRef(null);
+    const progressRef = useRef(null);
+    const startTimeRef = useRef(Date.now());
+
+    const startCycle = useCallback(() => {
+        // Clear existing timers
+        if (timerRef.current) clearTimeout(timerRef.current);
+        if (progressRef.current) cancelAnimationFrame(progressRef.current);
+
+        startTimeRef.current = Date.now();
+        setProgress(0);
+
+        // Animate progress bar
+        const tick = () => {
+            const elapsed = Date.now() - startTimeRef.current;
+            const pct = Math.min(elapsed / CYCLE_MS, 1);
+            setProgress(pct);
+            if (pct < 1) {
+                progressRef.current = requestAnimationFrame(tick);
+            }
+        };
+        progressRef.current = requestAnimationFrame(tick);
+
+        // Advance step after CYCLE_MS
+        timerRef.current = setTimeout(() => {
+            setActiveStep((prev) => (prev + 1) % steps.length);
+        }, CYCLE_MS);
+    }, []);
+
+    useEffect(() => {
+        startCycle();
+        return () => {
+            if (timerRef.current) clearTimeout(timerRef.current);
+            if (progressRef.current) cancelAnimationFrame(progressRef.current);
+        };
+    }, [activeStep, startCycle]);
+
+    const handleStepClick = (idx) => {
+        setActiveStep(idx);
+    };
 
     return (
         <section className="py-24 bg-[#0a0a0a] overflow-hidden">
@@ -57,7 +100,7 @@ const FeaturesSection = () => {
                         {steps.map((step, idx) => (
                             <button
                                 key={step.id}
-                                onClick={() => setActiveStep(idx)}
+                                onClick={() => handleStepClick(idx)}
                                 className={`w-full text-left p-6 rounded-2xl border transition-all duration-500 group relative overflow-hidden ${activeStep === idx
                                     ? 'bg-[#171717] border-orange-500/50 shadow-[0_0_30px_rgba(249,115,22,0.1)]'
                                     : 'bg-transparent border-gray-800 hover:border-gray-700'
@@ -128,8 +171,13 @@ const FeaturesSection = () => {
                                     </div>
                                 </div>
 
-                                {/* Decorative Progress Bar */}
-                                <div className="absolute bottom-0 left-0 h-1 bg-orange-500 w-full transform origin-left transition-transform duration-[4000ms] ease-linear scale-x-100" />
+                                {/* Auto-cycle Progress Bar */}
+                                <div className="absolute bottom-0 left-0 w-full h-1 bg-gray-800">
+                                    <div
+                                        className="h-full bg-orange-500"
+                                        style={{ width: `${progress * 100}%`, transition: 'width 50ms linear' }}
+                                    />
+                                </div>
                             </motion.div>
                         </AnimatePresence>
                     </div>

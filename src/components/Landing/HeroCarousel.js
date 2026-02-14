@@ -5,13 +5,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     ChevronLeft,
     ChevronRight,
-    User,
-    Coins,
-    Gift,
-    Package,
     Shield,
     Zap,
     Star,
+    Sparkles,
 } from 'lucide-react';
 import { slides } from '@/constants/slides'; // import the slides constant
 
@@ -50,7 +47,11 @@ const HeroCarousel = () => {
     const currentSlideData = slides[currentSlide];
 
     return (
-        <div className="relative w-full h-[60vh] md:h-[60vh] sm:h-[70vh] overflow-hidden">
+        <div className="relative w-full h-[60vh] md:h-[60vh] sm:h-[70vh] overflow-hidden bg-black">
+            {/* Background gradient orbs */}
+            <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-orange-500/10 rounded-full blur-[150px] pointer-events-none z-0" />
+            <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[120px] pointer-events-none z-0" />
+
             <AnimatePresence mode="wait">
                 <motion.div
                     key={currentSlide}
@@ -62,7 +63,7 @@ const HeroCarousel = () => {
                 >
                     {/* Background Image Overlay */}
                     <div
-                        className="absolute inset-0 bg-cover bg-center opacity-20"
+                        className="absolute inset-0 bg-cover bg-center"
                         style={{ backgroundImage: `url(${currentSlideData.image})` }}
                     />
 
@@ -104,15 +105,15 @@ const HeroCarousel = () => {
                                 transition={{ duration: 0.8, delay: 0.2 }}
                                 className="text-left space-y-4 md:space-y-6 max-w-[600px] flex-1"
                             >
-                                {/* Category Badge */}
+                                {/* Premium Category Badge */}
                                 <motion.div
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ duration: 0.6, delay: 0.3 }}
-                                    className="inline-flex items-center space-x-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full border border-white/30 w-fit"
+                                    className="inline-flex items-center gap-2 px-4 py-2 bg-white/[0.06] backdrop-blur-md rounded-full border border-white/[0.12] w-fit"
                                 >
-                                    <currentSlideData.icon className="w-5 h-5 text-white" />
-                                    <span className="text-white font-medium">
+                                    <Sparkles className="w-4 h-4 text-orange-400" />
+                                    <span className="text-white font-bold uppercase text-xs tracking-wider">
                                         {currentSlideData.ctaText.replace(
                                             /^(Shop|Buy|Get|Browse)\s/,
                                             ''
@@ -128,7 +129,7 @@ const HeroCarousel = () => {
                                     className="text-3xl md:text-5xl lg:text-6xl font-black leading-tight"
                                 >
                                     <span
-                                        className={`bg-orange-500 bg-clip-text text-transparent`}
+                                        className={`bg-gradient-to-r ${currentSlideData.bgColor.replace('from-', '').split(' ')[0].includes('orange') ? 'from-orange-400 to-orange-600' : 'from-blue-400 to-purple-600'} bg-clip-text text-transparent`}
                                     >
                                         {currentSlideData.headline
                                             .split(' ')
@@ -146,33 +147,33 @@ const HeroCarousel = () => {
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ duration: 0.8, delay: 0.6 }}
-                                    className="text-lg md:text-xl text-gray-200 leading-relaxed"
+                                    className="text-lg md:text-xl text-gray-300 leading-relaxed"
                                 >
                                     {currentSlideData.subtext}
                                 </motion.p>
 
-                                {/* Features List */}
+                                {/* Premium Features List */}
                                 <motion.div
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ duration: 0.8, delay: 0.7 }}
-                                    className="flex flex-wrap gap-6 text-white/80"
+                                    className="flex flex-wrap gap-4"
                                 >
-                                    <div className="flex items-center space-x-2">
-                                        <Shield className="w-5 h-5 text-white" />
-                                        <span>Secure</span>
+                                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08]">
+                                        <Shield className="w-4 h-4 text-orange-400" />
+                                        <span className="text-white/80 text-sm font-medium uppercase">Secure</span>
                                     </div>
-                                    <div className="flex items-center space-x-2">
-                                        <Zap className="w-5 h-5 text-white" />
-                                        <span>Instant</span>
+                                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08]">
+                                        <Zap className="w-4 h-4 text-yellow-400" />
+                                        <span className="text-white/80 text-sm font-medium uppercase">Instant</span>
                                     </div>
-                                    <div className="flex items-center space-x-2">
-                                        <Star className="w-5 h-5 text-white" />
-                                        <span>Premium</span>
+                                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08]">
+                                        <Star className="w-4 h-4 text-purple-400" />
+                                        <span className="text-white/80 text-sm font-medium uppercase">Premium</span>
                                     </div>
                                 </motion.div>
 
-                                {/* CTA Button */}
+                                {/* Premium CTA Button */}
                                 <motion.div
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
@@ -181,14 +182,14 @@ const HeroCarousel = () => {
                                 >
                                     <Link
                                         href={currentSlideData.ctaLink}
-                                        className="group inline-flex items-center space-x-3 px-6 md:px-8 py-3 md:py-4 bg-white/10 backdrop-blur-sm border-2 border-white/30 text-white font-bold text-base md:text-lg rounded-full hover:bg-white/20 transition-all duration-300 transform hover:scale-105 active:scale-95 w-fit"
+                                        className="group inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl text-white font-bold uppercase tracking-wider shadow-[0_0_30px_rgba(249,115,22,0.3)] hover:shadow-[0_0_40px_rgba(249,115,22,0.5)] hover:scale-105 transition-all duration-300"
                                     >
                                         <span>{currentSlideData.ctaText}</span>
                                         <motion.div
                                             animate={{ x: [0, 5, 0] }}
                                             transition={{ duration: 1.5, repeat: Infinity }}
                                         >
-                                            <ChevronRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
+                                            <ChevronRight className="w-5 h-5" />
                                         </motion.div>
                                     </Link>
                                 </motion.div>
@@ -198,43 +199,43 @@ const HeroCarousel = () => {
                 </motion.div>
             </AnimatePresence>
 
-            {/* Navigation Arrows */}
+            {/* Premium Navigation Arrows */}
             <button
                 onClick={prevSlide}
-                className="absolute left-4 md:left-8 top-1/2 transform -translate-y-1/2 z-20 p-3 bg-black/30 backdrop-blur-sm hover:bg-black/50 rounded-full transition-all duration-300 group border border-white/30"
+                className="absolute left-4 md:left-8 top-1/2 transform -translate-y-1/2 z-20 p-3 bg-white/[0.06] backdrop-blur-md border border-white/[0.12] rounded-full hover:bg-white/[0.12] hover:border-orange-500/30 transition-all duration-300 group"
             >
-                <ChevronLeft className="w-6 h-6 text-white group-hover:scale-110 transition-transform" />
+                <ChevronLeft className="w-6 h-6 text-white group-hover:text-orange-400 transition-colors" />
             </button>
 
             <button
                 onClick={nextSlide}
-                className="absolute right-4 md:right-8 top-1/2 transform -translate-y-1/2 z-20 p-3 bg-black/30 backdrop-blur-sm hover:bg-black/50 rounded-full transition-all duration-300 group border border-white/30"
+                className="absolute right-4 md:right-8 top-1/2 transform -translate-y-1/2 z-20 p-3 bg-white/[0.06] backdrop-blur-md border border-white/[0.12] rounded-full hover:bg-white/[0.12] hover:border-orange-500/30 transition-all duration-300 group"
             >
-                <ChevronRight className="w-6 h-6 text-white group-hover:scale-110 transition-transform" />
+                <ChevronRight className="w-6 h-6 text-white group-hover:text-orange-400 transition-colors" />
             </button>
 
-            {/* Slide Indicators */}
+            {/* Premium Slide Indicators */}
             <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20 flex space-x-3">
                 {slides.map((_, index) => (
                     <button
                         key={index}
                         onClick={() => goToSlide(index)}
-                        className={`w-3 h-3 rounded-full transition-all duration-300 ${index === currentSlide
-                            ? 'bg-white scale-125'
-                            : 'bg-white/30 hover:bg-white/60 border border-white/50'
+                        className={`h-2 rounded-full transition-all duration-300 ${index === currentSlide
+                            ? 'w-8 bg-gradient-to-r from-orange-500 to-orange-600'
+                            : 'w-2 bg-white/30 hover:bg-white/60 border border-white/50'
                             }`}
                     />
                 ))}
             </div>
 
-            {/* Progress Bar */}
+            {/* Premium Progress Bar */}
             <div className="absolute bottom-0 left-0 w-full h-1 bg-white/10 z-20">
                 <motion.div
                     key={currentSlide}
                     initial={{ width: '0%' }}
                     animate={{ width: '100%' }}
                     transition={{ duration: 4.5, ease: 'linear' }}
-                    className={`h-full bg-orange-500`}
+                    className="h-full bg-gradient-to-r from-orange-500 to-orange-600"
                 />
             </div>
         </div>

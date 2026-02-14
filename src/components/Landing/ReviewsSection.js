@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { Star, CheckCircle, ShieldCheck, Users } from 'lucide-react';
+import { Star, CheckCircle, Sparkles, TrendingUp, MessageSquare } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const reviews = [
@@ -19,18 +19,18 @@ const col1 = [...reviews, ...reviews];
 const col2 = [...[...reviews].reverse(), ...[...reviews].reverse()];
 
 const ReviewCard = ({ review }) => (
-    <div className="bg-[#171717] p-5 rounded-xl border border-gray-800 mb-4 hover:border-orange-500/30 transition-colors w-full">
+    <div className="bg-gradient-to-b from-white/[0.08] to-white/[0.02] backdrop-blur-sm p-5 rounded-xl border border-white/[0.12] mb-4 hover:border-orange-500/30 hover:shadow-[0_0_20px_rgba(249,115,22,0.1)] transition-all duration-500 w-full">
         <div className="flex mb-2">
             {[...Array(5)].map((_, s) => (
                 <Star
                     key={s}
-                    className={`w-3.5 h-3.5 ${s < review.rating ? 'text-green-500 fill-green-500' : 'text-gray-700'}`}
+                    className={`w-3.5 h-3.5 ${s < review.rating ? 'text-orange-400 fill-orange-400' : 'text-gray-700'}`}
                 />
             ))}
         </div>
         <h4 className="text-white font-bold text-sm mb-1 truncate">{review.title}</h4>
         <p className="text-gray-400 text-xs mb-3 line-clamp-3 leading-relaxed">"{review.content}"</p>
-        <div className="flex items-center justify-between pt-2 border-t border-gray-800/50">
+        <div className="flex items-center justify-between pt-2 border-t border-white/[0.06]">
             <span className="text-xs font-semibold text-gray-300">{review.user}</span>
             <span className="text-[10px] text-gray-600">{review.date}</span>
         </div>
@@ -40,8 +40,10 @@ const ReviewCard = ({ review }) => (
 const ReviewsSection = () => {
     return (
         <section className="py-24 bg-black relative overflow-hidden">
-            {/* Left Gradient Glow */}
-            <div className="absolute top-1/2 left-0 w-96 h-96 bg-orange-500/5 rounded-full blur-[100px] pointer-events-none -translate-y-1/2" />
+            {/* Background gradient orbs */}
+            <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-orange-500/10 rounded-full blur-[120px] pointer-events-none" />
+            <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-purple-500/10 rounded-full blur-[100px] pointer-events-none" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-500/5 rounded-full blur-[150px] pointer-events-none" />
 
             {/* CSS Animations */}
             <style dangerouslySetInnerHTML={{
@@ -75,41 +77,62 @@ const ReviewsSection = () => {
                     {/* LEFT SIDE: Trust Content */}
                     <div className="space-y-8">
                         <div>
-                            <div className="flex items-center space-x-2 text-green-500 mb-4">
-                                <Star className="w-5 h-5 fill-current" />
-                                <span className="font-bold">Trustpilot</span>
+                            {/* Premium Badge */}
+                            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.03] border border-white/[0.08] mb-6">
+                                <Sparkles className="w-4 h-4 text-orange-400" />
+                                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Trusted Worldwide</span>
                             </div>
-                            <h2 className="text-4xl md:text-6xl font-black text-white leading-tight mb-6">
-                                TRUSTED BY <br />
-                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-orange-400">
+
+                            <h2 className="text-4xl md:text-6xl font-black text-white leading-tight mb-6 uppercase">
+                                Trusted By <br />
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-600">
                                     Clients
                                 </span>
                             </h2>
                             <p className="text-gray-400 text-lg max-w-md leading-relaxed">
-                                Join over 500,000+ peoples who trust ARKD for safe, instant, and secure transactions every single day.
+                                Join over <span className="text-white font-bold">500,000+</span> gamers who trust ARKD for safe, instant, and secure transactions every single day.
                             </p>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-6">
-                            <div className="bg-[#0a0a0a] p-4 rounded-xl border border-gray-800">
-                                <div className="text-3xl font-bold text-white mb-1">4.9/5</div>
-                                <div className="text-sm text-gray-500">Average Rating</div>
+                        {/* Premium Glassmorphism Stat Cards */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-gradient-to-b from-white/[0.08] to-white/[0.02] backdrop-blur-sm p-5 rounded-xl border border-white/[0.12] hover:border-orange-500/30 transition-all">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center">
+                                        <Star className="w-4 h-4 text-orange-400 fill-orange-400" />
+                                    </div>
+                                    <span className="text-2xl font-black text-white">4.9/5</span>
+                                </div>
+                                <div className="text-xs text-gray-500 uppercase tracking-wider">Average Rating</div>
                             </div>
-                            <div className="bg-[#0a0a0a] p-4 rounded-xl border border-gray-800">
-                                <div className="text-3xl font-bold text-white mb-1">12k+</div>
-                                <div className="text-sm text-gray-500">Verified Reviews</div>
+                            <div className="bg-gradient-to-b from-white/[0.08] to-white/[0.02] backdrop-blur-sm p-5 rounded-xl border border-white/[0.12] hover:border-orange-500/30 transition-all">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center">
+                                        <MessageSquare className="w-4 h-4 text-green-400" />
+                                    </div>
+                                    <span className="text-2xl font-black text-white">12k+</span>
+                                </div>
+                                <div className="text-xs text-gray-500 uppercase tracking-wider">Verified Reviews</div>
                             </div>
                         </div>
 
-                        <div className="space-y-3 pt-4">
+                        {/* Divider */}
+                        <div className="flex items-center gap-4">
+                            <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                        </div>
+
+                        {/* Premium Check Items */}
+                        <div className="space-y-3">
                             {[
                                 "100% Money Back Guarantee",
                                 "Verified Sellers Only",
                                 "24/7 Human Review Process"
                             ].map((item, i) => (
-                                <div key={i} className="flex items-center space-x-3 text-gray-300">
-                                    <CheckCircle className="w-5 h-5 text-orange-500" />
-                                    <span>{item}</span>
+                                <div key={i} className="flex items-center space-x-3">
+                                    <div className="w-6 h-6 rounded-full bg-orange-500/10 flex items-center justify-center">
+                                        <CheckCircle className="w-4 h-4 text-orange-400" />
+                                    </div>
+                                    <span className="text-gray-300 font-medium">{item}</span>
                                 </div>
                             ))}
                         </div>
