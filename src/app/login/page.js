@@ -16,16 +16,30 @@ export default function Login() {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [busy, setBusy] = useState(false);
+    const [requires2FA, setRequires2FA] = useState(false);
+    const [twoFaToken, setTwoFaToken] = useState('');
 
     async function onSubmit(e) {
         e.preventDefault();
         setError('');
         setBusy(true);
         try {
-            await login({ email, password });
+            const data = await login({ email, password, twoFaToken: requires2FA ? twoFaToken : undefined });
+
+            if (data && data.requires2FA) {
+                setRequires2FA(true);
+                setError(data.message || '2FA code required');
+                setBusy(false);
+                return;
+            }
+
             const next = searchParams ? searchParams.get('next') : null;
             router.push(next || '/profile');
         } catch (err) {
+            // Keep 2FA input visible if backend returns requires2FA on error
+            if (err.data && err.data.requires2FA) {
+                setRequires2FA(true);
+            }
             setError(err.message || 'Login failed');
         } finally {
             setBusy(false);
@@ -148,6 +162,27 @@ export default function Login() {
                                 Forgot Password?
                             </Link>
                         </div>
+
+                        {requires2FA && (
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-2 p-3 rounded-xl bg-orange-500/10 border border-orange-500/20">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-orange-500 flex-shrink-0">
+                                        <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                                    </svg>
+                                    <span className="text-[13px] text-orange-400 font-medium">Enter the 6-digit code from your authenticator app</span>
+                                </div>
+                                <input
+                                    type="text"
+                                    placeholder="000000"
+                                    value={twoFaToken}
+                                    onChange={(e) => setTwoFaToken(e.target.value)}
+                                    maxLength={6}
+                                    disabled={busy}
+                                    className="w-full p-4 bg-black/60 border border-orange-500/30 rounded-xl text-[15px] text-slate-100 placeholder-slate-500 focus:outline-none focus:bg-black/80 focus:border-orange-500/60 focus:ring-[3px] focus:ring-orange-500/15 transition-all duration-300 text-center tracking-[0.5em] font-mono disabled:opacity-50 disabled:cursor-not-allowed"
+                                    autoFocus
+                                />
+                            </div>
+                        )}
 
                         <button
                             type="submit"

@@ -16,7 +16,44 @@ const FeaturedCategories = () => {
         }).filter(item => item.config)
         : [];
 
-    // Filter services and categories based on search
+    // Exact-match search results for preview bar
+    const exactMatches = useMemo(() => {
+        if (!searchQuery.trim()) return [];
+        
+        const query = searchQuery.toLowerCase();
+        const matches = [];
+        
+        activeServices.forEach(({ type, config: svc }) => {
+            // Check if service name matches exactly
+            if (svc.name.toLowerCase() === query || svc.title.toLowerCase() === query) {
+                const cats = serviceCategories[type] || [];
+                matches.push({
+                    type,
+                    config: svc,
+                    categories: cats,
+                    isExact: true
+                });
+            }
+            // Check if any category matches exactly
+            else {
+                const cats = serviceCategories[type] || [];
+                const matchingCats = cats.filter(cat => cat.toLowerCase() === query);
+                if (matchingCats.length > 0) {
+                    matches.push({
+                        type,
+                        config: svc,
+                        categories: matchingCats,
+                        isExact: false,
+                        matchedCategory: query
+                    });
+                }
+            }
+        });
+        
+        return matches;
+    }, [activeServices, searchQuery, serviceCategories]);
+
+    // Filter services and categories based on search (fallback)
     const filteredServices = useMemo(() => {
         if (!searchQuery.trim()) return activeServices;
         
@@ -77,7 +114,47 @@ const FeaturedCategories = () => {
                             )}
                         </div>
                     </div>
-                    {searchQuery && (
+                    {/* Exact Match Preview Bar */}
+                    {searchQuery && exactMatches.length > 0 && (
+                        <div className="mt-4 p-4 bg-gradient-to-b from-white/[0.06] to-white/[0.02] border border-white/[0.08] rounded-xl backdrop-blur-sm">
+                            <div className="space-y-3">
+                                {exactMatches.map((match, idx) => {
+                                    const Icon = match.config.icon;
+                                    return (
+                                        <div key={`${match.type}-${idx}`} className="flex items-center gap-4">
+                                            {/* Service Icon & Name */}
+                                            <div className="flex items-center gap-3 flex-shrink-0">
+                                                <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${match.config.color} p-[1px]`}>
+                                                    <div className="w-full h-full rounded-lg bg-[#141419] flex items-center justify-center">
+                                                        <Icon className="w-4 h-4 text-white" />
+                                                    </div>
+                                                </div>
+                                                <span className="text-sm font-black text-white uppercase tracking-wider">
+                                                    {match.matchedCategory || match.config.name}
+                                                </span>
+                                            </div>
+                                            
+                                            {/* Subcategories in a row */}
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                {(match.isExact ? match.categories : match.categories).map((cat) => (
+                                                    <Link
+                                                        key={cat}
+                                                        href={`${match.config.href}/${cat}`}
+                                                        className="px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06] text-xs font-semibold text-gray-400 hover:text-white hover:bg-orange-500/10 hover:border-orange-500/30 transition-all uppercase"
+                                                        onClick={() => setSearchQuery('')}
+                                                    >
+                                                        {cat}
+                                                    </Link>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+                    
+                    {searchQuery && exactMatches.length === 0 && (
                         <p className="text-center text-xs text-gray-500 mt-2">
                             Found {filteredServices.length} matching {filteredServices.length === 1 ? 'service' : 'services'}
                         </p>

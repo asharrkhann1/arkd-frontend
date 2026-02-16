@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -37,14 +37,40 @@ export default function CategoryListing({
     const { toggleWishlist, isInWishlist } = useWishlist();
     const [searchQuery, setSearchQuery] = useState('');
     const [priceRange, setPriceRange] = useState([0, 2000]);
-    const [sortBy, setSortBy] = useState('featured');
+    const [sortBy, setSortBy] = useState('recent-added');
     const [localPage, setLocalPage] = useState(1);
     const [activeFilters, setActiveFilters] = useState({});
     const [openDropdowns, setOpenDropdowns] = useState({});
+    const dropdownRefs = useRef({});
 
     const toggleDropdown = (key) => {
-        setOpenDropdowns(prev => ({ ...prev, [key]: !prev[key] }));
+        setOpenDropdowns(prev => {
+            // Close all other dropdowns, only open the clicked one
+            const newState = {};
+            Object.keys(prev).forEach(k => {
+                newState[k] = k === key ? !prev[k] : false;
+            });
+            newState[key] = !prev[key];
+            return newState;
+        });
     };
+
+    // Close dropdowns when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            const isOutside = Object.keys(dropdownRefs.current).every(key => {
+                const ref = dropdownRefs.current[key];
+                return ref && !ref.contains(event.target);
+            });
+
+            if (isOutside) {
+                setOpenDropdowns({});
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const dynamicFilters = useMemo(() => {
         const filters = {};
@@ -130,22 +156,26 @@ export default function CategoryListing({
             });
 
             return matchesSearch && matchesPrice && matchesDynamic;
-        }).sort((a, b) => {
-            if (sortBy === 'price-low') return a.price - b.price;
-            if (sortBy === 'price-high') return b.price - a.price;
-            if (sortBy === 'most-purchased') return (b.purchases_count || 0) - (a.purchases_count || 0);
-            return 0;
         });
-    }, [initialItems, searchQuery, priceRange, activeFilters, sortBy]);
+    }, [initialItems, searchQuery, priceRange, activeFilters]);
 
-    const totalFilteredItems = filteredItems.length;
+    const sortedItems = useMemo(() => {
+        const items = [...filteredItems];
+        if (sortBy === 'price-high') return items.sort((a, b) => Number(b.price) - Number(a.price));
+        if (sortBy === 'price-low') return items.sort((a, b) => Number(a.price) - Number(b.price));
+        if (sortBy === 'most-purchased') return items.sort((a, b) => (b.purchases_count || 0) - (a.purchases_count || 0));
+        if (sortBy === 'recent-added') return items.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+        return items;
+    }, [filteredItems, sortBy]);
+
+    const totalFilteredItems = sortedItems.length;
     const calculatedTotalPages = Math.ceil(totalFilteredItems / ITEMS_PER_PAGE);
     const effectivePage = Math.min(localPage, calculatedTotalPages || 1);
 
     const paginatedItems = useMemo(() => {
         const start = (effectivePage - 1) * ITEMS_PER_PAGE;
-        return filteredItems.slice(start, start + ITEMS_PER_PAGE);
-    }, [filteredItems, effectivePage]);
+        return sortedItems.slice(start, start + ITEMS_PER_PAGE);
+    }, [sortedItems, effectivePage]);
 
     const handlePageChange = (newPage) => {
         setLocalPage(newPage);
@@ -203,22 +233,67 @@ export default function CategoryListing({
                             <span className="text-white font-bold">{totalFilteredItems}</span> items
                         </p>
 
-                        {/* Premium Styled Sort Dropdown */}
-                        <div className="relative">
-                            <select
-                                value={sortBy}
-                                onChange={(e) => setSortBy(e.target.value)}
-                                className="appearance-none bg-gradient-to-r from-[#0a0a0a] to-black border border-orange-500/30 rounded-xl py-3 pl-4 pr-12 text-xs font-black text-white outline-none cursor-pointer uppercase tracking-wider hover:border-orange-500/50 hover:shadow-[0_0_20px_rgba(249,115,22,0.2)] transition-all min-w-[160px] [&>option]:bg-[#0a0a0a] [&>option]:text-white [&>option]:rounded-lg"
+                        {/* Filter-Style Sort Dropdown */}
+                        <div className="relative" ref={el => dropdownRefs.current['sort'] = el}>
+                            <button
+                                onClick={() => toggleDropdown('sort')}
+                                className={`flex items-center gap-2 px-3 py-2 bg-black border rounded-xl text-xs transition-all ${sortBy !== 'recent-added' ? 'border-orange-500/50 text-orange-400' : 'border-white/10 text-gray-300 hover:border-orange-500/30'
+                                    }`}
                             >
-                                <option value="featured">✨ Featured</option>
-                                <option value="most-purchased">🔥 Most Purchased</option>
-                                <option value="price-high">💎 Price: High → Low</option>
-                                <option value="price-low">💰 Price: Low → High</option>
-                            </select>
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                                <ChevronDown className="w-4 h-4 text-orange-500" />
-                            </div>
-                            <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-orange-500/10 to-red-500/10 opacity-0 hover:opacity-100 transition-opacity pointer-events-none" />
+                                <span className="text-[10px] uppercase font-bold">Sort</span>
+                                {/* <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-orange-500/20 text-orange-400">
+                                    {sortBy === 'recent-added' ? '🆕' : sortBy === 'most-purchased' ? '🔥' : sortBy === 'price-high' ? '💎' : '💰'}
+                                </span> */}
+                                <ChevronDown className={`w-3 h-3 transition-transform ${openDropdowns['sort'] ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            <AnimatePresence>
+                                {openDropdowns['sort'] && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                                        transition={{ duration: 0.2 }}
+                                        className="absolute top-full mt-2 left-0 w-48 bg-gradient-to-b from-[#1a1a1f] to-[#141419] border border-white/[0.12] rounded-xl shadow-[0_0_40px_rgba(0,0,0,0.4)] z-50 p-2"
+                                    >
+                                        {[
+                                            { value: 'recent-added', label: 'Recent Added' },
+                                            { value: 'most-purchased', label: 'Most Purchased' },
+                                            { value: 'price-high', label: 'Price: High → Low' },
+                                            { value: 'price-low', label: 'Price: Low → High' }
+                                        ].map((option) => (
+                                            <label
+                                                key={option.value}
+                                                className="relative flex items-center gap-3 p-2 rounded-lg cursor-pointer hover:bg-white/5 transition-colors"
+                                            >
+                                                <input
+                                                    type="radio"
+                                                    name="sort"
+                                                    value={option.value}
+                                                    checked={sortBy === option.value}
+                                                    onChange={(e) => {
+                                                        setSortBy(e.target.value);
+                                                        setOpenDropdowns(prev => ({ ...prev, sort: false }));
+                                                    }}
+                                                    className="sr-only"
+                                                />
+                                                <div className={`w-4 h-4 border-2 rounded-full transition-all ${sortBy === option.value
+                                                    ? 'border-orange-500 bg-orange-500'
+                                                    : 'border-gray-600'
+                                                    }`}>
+                                                    {sortBy === option.value && (
+                                                        <div className="w-2 h-2 bg-white rounded-full m-0.5" />
+                                                    )}
+                                                </div>
+                                                <span className={`text-xs font-medium ${sortBy === option.value ? 'text-orange-400' : 'text-gray-400'
+                                                    }`}>
+                                                    {option.label}
+                                                </span>
+                                            </label>
+                                        ))}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
                         </div>
 
                         {activeFilterCount > 0 && (
@@ -239,22 +314,23 @@ export default function CategoryListing({
                         <span className="text-[10px] font-bold uppercase tracking-widest text-gray-600 mr-2">Filters:</span>
 
                         {/* Price Range */}
-                        <div className="relative">
+                        <div className="relative" ref={el => dropdownRefs.current['price'] = el}>
                             <button
                                 onClick={() => toggleDropdown('price')}
-                                className="flex items-center gap-2 px-3 py-2 bg-black border border-white/10 rounded-xl text-xs text-gray-300 hover:border-orange-500/30 transition-all"
+                                className={`flex items-center gap-2 px-3 py-2 bg-black border rounded-xl text-xs transition-all ${priceRange[0] > 0 || priceRange[1] < 2000 ? 'border-orange-500/50 text-orange-400' : 'border-white/10 text-gray-300 hover:border-orange-500/30'}`}
                             >
-                                <span className="text-[10px] uppercase font-bold">Max: {formatPrice(priceRange[1])}</span>
+                                <span className="text-[10px] uppercase font-bold">Price</span>
                                 <ChevronDown className={`w-3 h-3 transition-transform ${openDropdowns['price'] ? 'rotate-180' : ''}`} />
                             </button>
 
                             <AnimatePresence>
                                 {openDropdowns['price'] && (
                                     <motion.div
-                                        initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
                                         animate={{ opacity: 1, y: 0, scale: 1 }}
-                                        exit={{ opacity: 0, y: 8, scale: 0.98 }}
-                                        className="absolute top-full left-0 mt-2 w-56 bg-black border border-white/10 rounded-xl p-4 shadow-2xl z-50"
+                                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                                        transition={{ duration: 0.2 }}
+                                        className="absolute top-full mt-2 left-0 w-64 bg-gradient-to-b from-[#1a1a1f] to-[#141419] border border-white/[0.12] rounded-xl shadow-[0_0_40px_rgba(0,0,0,0.4)] z-50 p-4"
                                     >
                                         <div className="flex justify-between items-center mb-3">
                                             <span className="text-[10px] font-bold uppercase text-gray-500">Price Range</span>
@@ -276,7 +352,7 @@ export default function CategoryListing({
 
                         {/* Dynamic Select Filters */}
                         {dynamicFilters.filter(f => f.type === 'select').map(filter => (
-                            <div key={filter.key} className="relative">
+                            <div key={filter.key} className="relative" ref={el => dropdownRefs.current[filter.key] = el}>
                                 <button
                                     onClick={() => toggleDropdown(filter.key)}
                                     className={`flex items-center gap-2 px-3 py-2 bg-black border rounded-xl text-xs transition-all ${activeFilters[filter.key]?.length > 0 ? 'border-orange-500/50 text-orange-400' : 'border-white/10 text-gray-300 hover:border-orange-500/30'}`}

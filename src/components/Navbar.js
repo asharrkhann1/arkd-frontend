@@ -427,6 +427,14 @@ const Navbar = ({ initialPendingOrders = [] }) => {
                                                     <User className="w-4 h-4" />
                                                     <span>My Profile</span>
                                                 </Link>
+                                                <Link
+                                                    href="/settings"
+                                                    className="flex items-center space-x-3 px-3 py-2 text-sm text-gray-300 hover:bg-orange-500/10 hover:text-orange-500 rounded-lg transition-colors"
+                                                    onClick={() => setUserMenuOpen(false)}
+                                                >
+                                                    <Settings className="w-4 h-4" />
+                                                    <span>Settings</span>
+                                                </Link>
                                                 {user.role === 'admin' && (
                                                     <Link
                                                         href="/admin"
@@ -632,6 +640,14 @@ const Navbar = ({ initialPendingOrders = [] }) => {
                                                 >
                                                     <User className="w-4 h-4" />
                                                     <span>Profile</span>
+                                                </Link>
+                                                <Link
+                                                    href="/settings"
+                                                    className="flex items-center justify-center space-x-2 bg-gray-800 p-2.5 rounded-lg text-sm text-gray-300"
+                                                    onClick={() => setMobileMenuOpen(false)}
+                                                >
+                                                    <Settings className="w-4 h-4" />
+                                                    <span>Settings</span>
                                                 </Link>
                                                 <button onClick={handleLogout} className="flex items-center justify-center space-x-2 bg-red-500/10 p-2.5 rounded-lg text-sm text-red-400">
                                                     <LogOut className="w-4 h-4" />

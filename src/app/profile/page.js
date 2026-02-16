@@ -24,14 +24,14 @@ const quickActions = [
     { label: 'Orders', icon: ClipboardList, href: '/orders', color: 'blue' },
     { label: 'Library', icon: Heart, href: '/wishlist', color: 'pink' },
     { label: 'Chat', icon: MessageCircle, href: null, color: 'green', action: 'chat' },
-    // { label: 'Settings', icon: Settings, href: '/profile/settings', color: 'purple' },
+    { label: 'Settings', icon: Settings, href: '/settings', color: 'purple' },
 ];
 
 const colorMap = {
     orange: { border: 'border-orange-500/60', text: 'text-orange-400', bg: 'bg-orange-500/10', hover: 'hover:bg-orange-500/20' },
-    blue:   { border: 'border-blue-500/60',   text: 'text-blue-400',   bg: 'bg-blue-500/10',   hover: 'hover:bg-blue-500/20' },
-    pink:   { border: 'border-pink-500/60',   text: 'text-pink-400',   bg: 'bg-pink-500/10',   hover: 'hover:bg-pink-500/20' },
-    green:  { border: 'border-green-500/60',  text: 'text-green-400',  bg: 'bg-green-500/10',  hover: 'hover:bg-green-500/20' },
+    blue: { border: 'border-blue-500/60', text: 'text-blue-400', bg: 'bg-blue-500/10', hover: 'hover:bg-blue-500/20' },
+    pink: { border: 'border-pink-500/60', text: 'text-pink-400', bg: 'bg-pink-500/10', hover: 'hover:bg-pink-500/20' },
+    green: { border: 'border-green-500/60', text: 'text-green-400', bg: 'bg-green-500/10', hover: 'hover:bg-green-500/20' },
     purple: { border: 'border-purple-500/60', text: 'text-purple-400', bg: 'bg-purple-500/10', hover: 'hover:bg-purple-500/20' },
 };
 
@@ -128,11 +128,10 @@ export default function ProfilePage() {
                             {/* Badges */}
                             <div className="flex flex-wrap gap-2 mt-3">
                                 {/* Verified badge */}
-                                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border shadow-sm ${
-                                    user.is_verified
+                                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border shadow-sm ${user.is_verified
                                         ? 'border-green-500/40 bg-gradient-to-r from-green-500/20 to-green-600/10 text-green-400 shadow-green-500/20'
                                         : 'border-red-500/40 bg-gradient-to-r from-red-500/20 to-red-600/10 text-red-400 shadow-red-500/20'
-                                }`}>
+                                    }`}>
                                     <CheckCircle2 className="w-3.5 h-3.5" />
                                     Verified Status: {user.is_verified ? 'Verified' : 'Unverified'}
                                 </span>
@@ -149,7 +148,7 @@ export default function ProfilePage() {
 
                 {/* ─── Quick Actions Card ──────────────────────────────── */}
                 <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl p-5 sm:p-6 shadow-[0_0_40px_rgba(0,0,0,0.3)]">
-                    <div className="grid grid-cols-4 gap-3 sm:gap-6">
+                    <div className="grid grid-cols-5 gap-3 sm:gap-6">
                         {quickActions.map((item) => {
                             const c = colorMap[item.color];
                             const Icon = item.icon;

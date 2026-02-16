@@ -42,29 +42,11 @@ const CYCLE_MS = 4000;
 
 const FeaturesSection = () => {
     const [activeStep, setActiveStep] = useState(0);
-    const [progress, setProgress] = useState(0);
     const timerRef = useRef(null);
-    const progressRef = useRef(null);
-    const startTimeRef = useRef(Date.now());
 
     const startCycle = useCallback(() => {
-        // Clear existing timers
+        // Clear existing timer
         if (timerRef.current) clearTimeout(timerRef.current);
-        if (progressRef.current) cancelAnimationFrame(progressRef.current);
-
-        startTimeRef.current = Date.now();
-        setProgress(0);
-
-        // Animate progress bar
-        const tick = () => {
-            const elapsed = Date.now() - startTimeRef.current;
-            const pct = Math.min(elapsed / CYCLE_MS, 1);
-            setProgress(pct);
-            if (pct < 1) {
-                progressRef.current = requestAnimationFrame(tick);
-            }
-        };
-        progressRef.current = requestAnimationFrame(tick);
 
         // Advance step after CYCLE_MS
         timerRef.current = setTimeout(() => {
@@ -76,11 +58,14 @@ const FeaturesSection = () => {
         startCycle();
         return () => {
             if (timerRef.current) clearTimeout(timerRef.current);
-            if (progressRef.current) cancelAnimationFrame(progressRef.current);
         };
     }, [activeStep, startCycle]);
 
     const handleStepClick = (idx) => {
+        // Clear any existing timer
+        if (timerRef.current) clearTimeout(timerRef.current);
+
+        // Set the new step
         setActiveStep(idx);
     };
 
@@ -173,9 +158,15 @@ const FeaturesSection = () => {
 
                                 {/* Auto-cycle Progress Bar */}
                                 <div className="absolute bottom-0 left-0 w-full h-1 bg-gray-800">
-                                    <div
+                                    <motion.div
+                                        key={activeStep}
                                         className="h-full bg-orange-500"
-                                        style={{ width: `${progress * 100}%`, transition: 'width 50ms linear' }}
+                                        initial={{ width: "0%" }}
+                                        animate={{ width: "100%" }}
+                                        transition={{
+                                            duration: CYCLE_MS / 1000,
+                                            ease: "linear"
+                                        }}
                                     />
                                 </div>
                             </motion.div>

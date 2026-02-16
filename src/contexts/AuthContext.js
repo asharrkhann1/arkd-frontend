@@ -33,12 +33,14 @@ export function AuthProvider({ children }) {
     return data;
   }, []);
 
-  const login = useCallback(async ({ email, password }) => {
+  const login = useCallback(async ({ email, password, twoFaToken }) => {
+    const body = { email, password };
+    if (twoFaToken) body.twoFaToken = twoFaToken;
     const data = await apiFetch('/auth/login', {
       method: 'POST',
-      body: { email, password },
+      body,
     });
-    setUser(data && data.user ? data.user : null);
+    if (data && data.user) setUser(data.user);
     return data;
   }, []);
 
@@ -75,6 +77,74 @@ export function AuthProvider({ children }) {
     });
   }, []);
 
+  // Settings functions
+  const changeUsername = useCallback(async ({ password, newUsername }) => {
+    const data = await apiFetch('/settings/username', {
+      method: 'POST',
+      body: { password, newUsername },
+    });
+    if (data.success) setUser(prev => prev ? { ...prev, username: data.username } : prev);
+    return data;
+  }, []);
+
+  const requestEmailChange = useCallback(async ({ password, newEmail }) => {
+    return apiFetch('/settings/email/request', {
+      method: 'POST',
+      body: { password, newEmail },
+    });
+  }, []);
+
+  const confirmEmailChange = useCallback(async ({ newEmail, otp }) => {
+    const data = await apiFetch('/settings/email/confirm', {
+      method: 'POST',
+      body: { newEmail, otp },
+    });
+    if (data.success) setUser(prev => prev ? { ...prev, email: data.email } : prev);
+    return data;
+  }, []);
+
+  const changePasswordSettings = useCallback(async ({ currentPassword, newPassword, confirmPassword }) => {
+    return apiFetch('/settings/password', {
+      method: 'POST',
+      body: { currentPassword, newPassword, confirmPassword },
+    });
+  }, []);
+
+  const generate2FASecret = useCallback(async () => {
+    return apiFetch('/settings/2fa/generate', { method: 'POST' });
+  }, []);
+
+  const enable2FA = useCallback(async ({ token }) => {
+    const data = await apiFetch('/settings/2fa/enable', {
+      method: 'POST',
+      body: { token },
+    });
+    if (data.success) setUser(prev => prev ? { ...prev, two_fa_enabled: true } : prev);
+    return data;
+  }, []);
+
+  const disable2FA = useCallback(async ({ password, token }) => {
+    const data = await apiFetch('/settings/2fa/disable', {
+      method: 'POST',
+      body: { password, token },
+    });
+    if (data.success) setUser(prev => prev ? { ...prev, two_fa_enabled: false } : prev);
+    return data;
+  }, []);
+
+  const requestAccountVerify = useCallback(async () => {
+    return apiFetch('/settings/verify/request', { method: 'POST' });
+  }, []);
+
+  const confirmAccountVerify = useCallback(async ({ otp }) => {
+    const data = await apiFetch('/settings/verify/confirm', {
+      method: 'POST',
+      body: { otp },
+    });
+    if (data.success) setUser(prev => prev ? { ...prev, is_verified: true } : prev);
+    return data;
+  }, []);
+
   const value = useMemo(
     () => ({
       user,
@@ -87,6 +157,15 @@ export function AuthProvider({ children }) {
       verifyOtp,
       forgotPassword,
       changePassword,
+      changeUsername,
+      requestEmailChange,
+      confirmEmailChange,
+      changePasswordSettings,
+      generate2FASecret,
+      enable2FA,
+      disable2FA,
+      requestAccountVerify,
+      confirmAccountVerify,
     }),
     [
       user,
@@ -99,6 +178,15 @@ export function AuthProvider({ children }) {
       verifyOtp,
       forgotPassword,
       changePassword,
+      changeUsername,
+      requestEmailChange,
+      confirmEmailChange,
+      changePasswordSettings,
+      generate2FASecret,
+      enable2FA,
+      disable2FA,
+      requestAccountVerify,
+      confirmAccountVerify,
     ]
   );
 
