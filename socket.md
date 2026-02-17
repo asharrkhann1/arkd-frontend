@@ -1,5 +1,5 @@
 # Chat (Socket.IO) Integration
-
+1
 This document describes how to connect your frontend (User website + Admin panel) to the backend real-time chat.
 
 ## Core Principles
