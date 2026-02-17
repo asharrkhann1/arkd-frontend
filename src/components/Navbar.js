@@ -420,6 +420,14 @@ const Navbar = ({ initialPendingOrders = [] }) => {
                                                     <span>My Disputes</span>
                                                 </Link>
                                                 <Link
+                                                    href="/wallet"
+                                                    className="flex items-center space-x-3 px-3 py-2 text-sm text-gray-300 hover:bg-orange-500/10 hover:text-orange-500 rounded-lg transition-colors"
+                                                    onClick={() => setUserMenuOpen(false)}
+                                                >
+                                                    <Wallet className="w-4 h-4" />
+                                                    <span>Wallet</span>
+                                                </Link>
+                                                <Link
                                                     href="/profile"
                                                     className="flex items-center space-x-3 px-3 py-2 text-sm text-gray-300 hover:bg-orange-500/10 hover:text-orange-500 rounded-lg transition-colors"
                                                     onClick={() => setUserMenuOpen(false)}
@@ -632,6 +640,14 @@ const Navbar = ({ initialPendingOrders = [] }) => {
                                                 >
                                                     <Flag className="w-4 h-4" />
                                                     <span>Disputes</span>
+                                                </Link>
+                                                <Link
+                                                    href="/wallet"
+                                                    className="flex items-center justify-center space-x-2 bg-gray-800 p-2.5 rounded-lg text-sm text-gray-300"
+                                                    onClick={() => setMobileMenuOpen(false)}
+                                                >
+                                                    <Wallet className="w-4 h-4" />
+                                                    <span>Wallet</span>
                                                 </Link>
                                                 <Link
                                                     href="/profile"
