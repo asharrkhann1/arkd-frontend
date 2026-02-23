@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { MessageCircle, Paperclip, SendHorizonal, Volume2, VolumeX, X, ChevronDown } from 'lucide-react';
+import { MessageCircle, Paperclip, SendHorizonal, Volume2, VolumeX, X, ChevronDown, Filter, Package, Calendar } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSocket } from '@/contexts/SocketContext';
@@ -23,6 +23,17 @@ export default function ChatFab() {
   const [uploading, setUploading] = useState(false);
   const [beepMuted, setBeepMuted] = useState(false);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterFrom, setFilterFrom] = useState('');
+  const [filterTo, setFilterTo] = useState('');
+  const [orderMessages, setOrderMessages] = useState([]);
+  const [selectedOrderJump, setSelectedOrderJump] = useState('');
+  const [jumpLoading, setJumpLoading] = useState(false);
+  const [filteredMessages, setFilteredMessages] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [currentSearchIndex, setCurrentSearchIndex] = useState(-1);
+  const [systemMessages, setSystemMessages] = useState([]);
   const receiverId = 1;
 
   const isAuthed = !!user;
@@ -83,11 +94,53 @@ export default function ChatFab() {
     setChatOpen(false);
   }, [pathname]);
 
+  const scrollToMessageId = useCallback((messageId) => {
+    if (!messageId) return;
+    setTimeout(() => {
+      const el = document.querySelector(`[data-message-id="${messageId}"]`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('ring-2', 'ring-orange-500/60');
+        setTimeout(() => el.classList.remove('ring-2', 'ring-orange-500/60'), 2500);
+      }
+    }, 300);
+  }, []);
+
   useEffect(() => {
-    const openHandler = () => setChatOpen(true);
+    const openHandler = async (e) => {
+      setChatOpen(true);
+      const orderId = e?.detail?.orderId;
+      if (orderId) {
+        try {
+          setJumpLoading(true);
+          const data = await apiFetch(`/chat/order-message/${orderId}`);
+          if (data.message_id) {
+            scrollToMessageId(data.message_id);
+          }
+        } catch { /* silent */ } finally {
+          setJumpLoading(false);
+        }
+      }
+    };
     window.addEventListener('open-chat', openHandler);
     return () => window.removeEventListener('open-chat', openHandler);
-  }, []);
+  }, [scrollToMessageId]);
+
+  // Fetch system messages for the dropdown
+  useEffect(() => {
+    if (!chatOpen || !isAuthed) return;
+    apiFetch('/chat/system-messages').then(data => {
+      setSystemMessages(data.messages || []);
+      // Keep backward compatibility
+      setOrderMessages(data.messages?.filter(m => m.type === 'order').map(m => ({
+        order_id: m.meta?.order_id,
+        message_id: m.message_id,
+        type: m.meta?.type || 'order',
+        product_title: m.meta?.product_title || m.subtitle,
+        created_at: m.created_at
+      })) || []);
+    }).catch(() => { });
+  }, [chatOpen, isAuthed]);
 
   useEffect(() => {
     try {
@@ -309,6 +362,115 @@ export default function ChatFab() {
     return 'other';
   }
 
+  const handleApplyFilters = useCallback(async () => {
+    if (!filterFrom && !filterTo) {
+      setFilteredMessages(null);
+      return;
+    }
+    try {
+      setJumpLoading(true);
+      const params = new URLSearchParams();
+      if (filterFrom) params.set('from', filterFrom);
+      if (filterTo) params.set('to', filterTo);
+      const data = await apiFetch(`/chat/messages/search?${params.toString()}`);
+      setFilteredMessages(data.messages || []);
+      if (data.first_message_id) {
+        scrollToMessageId(data.first_message_id);
+      }
+    } catch { /* silent */ } finally {
+      setJumpLoading(false);
+    }
+  }, [filterFrom, filterTo, scrollToMessageId]);
+
+  const handleClearFilters = useCallback(() => {
+    setFilterFrom('');
+    setFilterTo('');
+    setFilteredMessages(null);
+    setShowFilters(false);
+  }, []);
+
+  const handleOrderJump = useCallback(async (messageId) => {
+    if (!messageId) return;
+    setSelectedOrderJump(messageId);
+    scrollToMessageId(Number(messageId));
+  }, [scrollToMessageId]);
+
+  const displayMessages = useMemo(() => {
+    if (filteredMessages !== null) return filteredMessages;
+    
+    // Combine regular messages with system messages
+    const allMessages = [...messages];
+    
+    // Add system messages that aren't already in the messages array
+    systemMessages.forEach(sysMsg => {
+      const exists = messages.some(m => m.id === sysMsg.message_id);
+      if (!exists && sysMsg.message_id) {
+        // Convert system message format to match chat message format
+        allMessages.push({
+          id: sysMsg.message_id,
+          conversation_id: null,
+          sender_role: 'system',
+          sender_id: 0,
+          message_type: 'text',
+          message: { text: sysMsg.text },
+          is_seen: 0,
+          created_at: sysMsg.created_at,
+        });
+      }
+    });
+    
+    // Sort by creation date
+    allMessages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    
+    return allMessages;
+  }, [filteredMessages, messages, systemMessages]);
+
+  const handleSearch = useCallback(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) {
+      setSearchResults([]);
+      setCurrentSearchIndex(-1);
+      return;
+    }
+
+    const results = displayMessages.filter(m => {
+      const text = getText(m);
+      return text.toLowerCase().includes(query);
+    });
+    setSearchResults(results);
+    setCurrentSearchIndex(results.length > 0 ? 0 : -1);
+
+    if (results.length > 0) {
+      const msg = results[0];
+      const messageId = msg?.message_id || msg?.id;
+      if (messageId) {
+        scrollToMessageId(messageId);
+      }
+    }
+  }, [searchQuery, filteredMessages, messages, systemMessages, scrollToMessageId]);
+
+  const handleSearchNext = useCallback(() => {
+    if (searchResults.length === 0) return;
+    const next = (currentSearchIndex + 1) % searchResults.length;
+    setCurrentSearchIndex(next);
+    const msg = searchResults[next];
+    const messageId = msg?.message_id || msg?.id;
+    if (messageId) {
+      scrollToMessageId(messageId);
+    }
+  }, [searchResults, currentSearchIndex, scrollToMessageId]);
+
+  const handleSearchPrev = useCallback(() => {
+    if (searchResults.length === 0) return;
+    const prev = (currentSearchIndex - 1 + searchResults.length) % searchResults.length;
+    setCurrentSearchIndex(prev);
+    const msg = searchResults[prev];
+    const messageId = msg?.message_id || msg?.id;
+    if (messageId) {
+      scrollToMessageId(messageId);
+    }
+  }, [searchResults, currentSearchIndex, scrollToMessageId]);
+
   function handleSend() {
     if (!isAuthed) return;
     const text = input.trim();
@@ -316,6 +478,11 @@ export default function ChatFab() {
 
     setError('');
     setInput('');
+    if (filteredMessages !== null) {
+      setFilteredMessages(null);
+      setFilterFrom('');
+      setFilterTo('');
+    }
     sendMessage({ message_type: 'text', message: text });
     setTimeout(() => {
       if (bottomRef.current) bottomRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -366,18 +533,42 @@ export default function ChatFab() {
   }
 
   return (
-    <div ref={containerRef} className="fixed bottom-5 right-5 z-[1000] flex flex-col items-end">
-      <div className="fixed inset-0 pointer-events-none" style={{ background: 'radial-gradient(circle at top, rgba(249, 115, 22, 0.08), transparent 45%)' }} />
+    <div>
+      {/* Backdrop */}
       {chatOpen && (
-        <div className="mb-3 w-[420px] sm:w-[480px] max-w-[92vw] h-[520px] max-h-[80vh] rounded-[16px] border border-white/[0.08] bg-white/[0.04] backdrop-blur-[14px] shadow-[0_30px_90px_rgba(0,0,0,0.75)] overflow-hidden flex flex-col">
-          <div className="relative px-[14px] py-3 border-b border-white/[0.08]">
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[999] transition-opacity duration-300"
+          onClick={() => setChatOpen(false)}
+        />
+      )}
+
+      {/* Chat Drawer */}
+      <div
+        ref={containerRef}
+        className={`fixed top-0 right-0 h-full w-[420px] sm:w-[480px] max-w-[92vw] z-[1000] transform transition-transform duration-300 ease-out ${chatOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
+      >
+        <div className="h-full flex flex-col border-l border-white/[0.08] bg-white/[0.04] backdrop-blur-[14px] shadow-[-30px_0_90px_rgba(0,0,0,0.75)]">
+          {/* Top Bar Row */}
+          <div className="relative px-[14px] py-4 border-b border-white/[0.08] bg-gradient-to-b from-orange-500/10 to-transparent">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(249,115,22,0.15),transparent_60%)]" />
             <div className="relative flex items-center justify-between">
               <div className="flex flex-col">
                 <div className="text-[14px] font-black uppercase tracking-[0.12em] text-orange-500/85">Chat with Admin</div>
+                <div className="text-[10px] text-gray-500 mt-1">Get support and assistance</div>
               </div>
 
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowFilters(v => !v)}
+                  className={`h-9 w-9 rounded-[10px] border bg-white/[0.04] hover:border-orange-500/35 text-gray-300 hover:text-white transition-all flex items-center justify-center ${showFilters || filteredMessages ? 'border-orange-500/50 text-orange-400' : 'border-white/[0.08]'}`}
+                  aria-label="Filters"
+                  title="Filters & Orders"
+                >
+                  <Filter className="h-4 w-4" />
+                </button>
+
                 <button
                   type="button"
                   onClick={toggleBeepMuted}
@@ -400,6 +591,133 @@ export default function ChatFab() {
             </div>
           </div>
 
+          {/* Filters Panel */}
+          {showFilters && (
+            <div className="relative mt-3 space-y-2">
+              {/* Timestamp filters */}
+              <div className="flex gap-2 items-end">
+                <div className="flex-1">
+                  <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 block mb-1">From</label>
+                  <input
+                    type="date"
+                    value={filterFrom}
+                    onChange={(e) => setFilterFrom(e.target.value)}
+                    className="w-full h-8 px-2 rounded-lg bg-black/40 border border-white/[0.08] text-gray-200 text-[11px] outline-none focus:border-orange-500/40"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 block mb-1">To</label>
+                  <input
+                    type="date"
+                    value={filterTo}
+                    onChange={(e) => setFilterTo(e.target.value)}
+                    className="w-full h-8 px-2 rounded-lg bg-black/40 border border-white/[0.08] text-gray-200 text-[11px] outline-none focus:border-orange-500/40"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleApplyFilters}
+                  disabled={jumpLoading}
+                  className="h-8 px-3 rounded-lg bg-orange-500/15 border border-orange-500/30 text-orange-400 text-[10px] font-bold uppercase hover:bg-orange-500/25 transition-all disabled:opacity-50"
+                >
+                  {jumpLoading ? '...' : 'Apply'}
+                </button>
+                {filteredMessages && (
+                  <button
+                    type="button"
+                    onClick={handleClearFilters}
+                    className="h-8 px-3 rounded-lg bg-white/[0.04] border border-white/[0.08] text-gray-400 text-[10px] font-bold uppercase hover:text-white transition-all"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+
+              {/* Search */}
+              <div>
+                <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 block mb-1">Search Messages</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSearch();
+                      }
+                    }}
+                    placeholder="Type to search..."
+                    className="flex-1 h-8 px-2 rounded-lg bg-black/40 border border-white/[0.08] text-gray-200 text-[11px] outline-none focus:border-orange-500/40 placeholder-gray-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSearch}
+                    className="h-8 px-3 rounded-lg bg-orange-500/15 border border-orange-500/30 text-orange-400 text-[10px] font-bold uppercase hover:bg-orange-500/25 transition-all"
+                  >
+                    Search
+                  </button>
+                </div>
+                {searchResults.length > 0 && (
+                  <div className="flex items-center justify-between mt-2">
+                    <div className="text-[10px] text-gray-500 font-bold">
+                      {currentSearchIndex + 1} of {searchResults.length} results
+                    </div>
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={handleSearchPrev}
+                        className="h-6 px-2 rounded bg-white/[0.04] border border-white/[0.08] text-gray-400 text-[9px] font-bold hover:text-white transition-all"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSearchNext}
+                        className="h-6 px-2 rounded bg-white/[0.04] border border-white/[0.08] text-gray-400 text-[9px] font-bold hover:text-white transition-all"
+                      >
+                        ↓
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* System messages jump dropdown */}
+              {systemMessages.length > 0 && (
+                <div>
+                  <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 block mb-1">Jump to Message</label>
+                  <select
+                    value={selectedOrderJump}
+                    onChange={(e) => handleOrderJump(e.target.value)}
+                    className="w-full h-8 px-2 rounded-lg bg-black/40 border border-white/[0.08] text-gray-200 text-[11px] outline-none focus:border-orange-500/40 appearance-none cursor-pointer"
+                  >
+                    <option value="" className="bg-black">Select a message...</option>
+                    {systemMessages.map(m => {
+                      const icon = m.type === 'order' ? '🛒' : m.type === 'dispute' ? '⚠️' : m.type === 'ticket' ? '🎫' : '📢';
+                      return (
+                        <option key={m.message_id} value={m.message_id} className="bg-black">
+                          {icon} {m.title} — {m.subtitle} ({new Date(m.created_at).toLocaleDateString()})
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+              )}
+
+              {searchQuery.trim() && (
+                <div className="text-[10px] text-gray-500 font-bold">
+                  Search: {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} for "{searchQuery}" (jumping to {currentSearchIndex + 1})
+                </div>
+              )}
+              {filteredMessages && !searchQuery.trim() && (
+                <div className="text-[10px] text-gray-500 font-bold">
+                  Showing {filteredMessages.length} filtered message{filteredMessages.length !== 1 ? 's' : ''}
+                </div>
+              )}
+            </div>
+          )}
+
           <div
             className="flex-1 px-3 py-3 overflow-y-auto overflow-x-hidden bg-[#0b0b0b]"
             onScroll={handleScroll}
@@ -416,7 +734,7 @@ export default function ChatFab() {
             )}
 
             <div className="flex flex-col gap-3">
-              {messages.map((m, idx) => {
+              {displayMessages.map((m, idx) => {
                 const senderRole = getRole(m);
                 const myRole = role || (isAdmin ? 'admin' : 'user');
                 const mine = senderRole === myRole;
@@ -428,7 +746,7 @@ export default function ChatFab() {
 
                 if (senderRole === 'system') {
                   return (
-                    <div key={m?.id ?? `m-${idx}`} className="flex justify-center">
+                    <div key={m?.id ?? `m-${idx}`} data-message-id={m?.id} className="flex justify-center transition-all duration-300 rounded-2xl">
                       <div className="max-w-[90%] px-4 py-2.5 text-[11px] leading-relaxed text-center rounded-2xl bg-white/[0.04] border border-white/[0.06] text-gray-400 whitespace-pre-wrap break-words [word-break:break-word]">
                         {text || '...'}
                         <div className="text-[9px] text-gray-600 mt-1">
@@ -440,7 +758,7 @@ export default function ChatFab() {
                 }
 
                 return (
-                  <div key={m?.id ?? `m-${idx}`} className={`flex min-w-0 ${mine ? 'justify-end' : 'justify-start'}`}>
+                  <div key={m?.id ?? `m-${idx}`} data-message-id={m?.id} className={`flex min-w-0 transition-all duration-300 rounded-2xl ${mine ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-[85%] min-w-0 ${mine ? 'items-end' : 'items-start'} flex flex-col gap-2`}>
                       {type === 'media' && mediaUrl ? (
                         <div
@@ -491,16 +809,19 @@ export default function ChatFab() {
             {showScrollBtn && (
               <button
                 onClick={scrollToBottom}
-                className="absolute bottom-20 left-1/2 -translate-x-1/2 h-8 px-3 rounded-full border border-white/[0.08] bg-white/[0.08] hover:bg-white/[0.12] text-white text-xs font-medium flex items-center gap-1 transition-all shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
+                className="absolute bottom-24 left-1/2 -translate-x-1/2 h-8 px-3 rounded-full border border-white/[0.08] bg-white/[0.08] hover:bg-white/[0.12] text-white text-xs font-medium flex items-center gap-1 transition-all shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
               >
                 <ChevronDown className="h-3 w-3" />
                 New messages
               </button>
             )}
+
+            {/* Empty spacer at the end */}
+            <div className="h-4" />
           </div>
 
-          <div className="px-3 pb-3 bg-[#0b0b0b] border-t border-white/[0.08] shrink-0">
-            <div className="flex items-end gap-2 pt-3">
+          <div className="px-3 pb-6 bg-[#0b0b0b] border-t border-white/[0.08] shrink-0">
+            <div className="flex items-end gap-2 pt-4">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -548,8 +869,19 @@ export default function ChatFab() {
               </button>
             </div>
           </div>
+
+          <div className="h-[70px] px-3 pb-3 bg-[#0b0b0b] shrink-0 relative overflow-hidden">
+            <div className="absolute inset-0 opacity-20">
+              <div className="h-full w-full" style={{
+                backgroundImage: `radial-gradient(circle, rgba(255,255,255,0.3) 1px, transparent 1px)`,
+                backgroundSize: '12px 12px',
+                backgroundPosition: '0 0, 6px 6px'
+              }} />
+            </div>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+          </div>
         </div>
-      )}
+      </div>
 
       <button
         type="button"
@@ -560,7 +892,7 @@ export default function ChatFab() {
           }
           setChatOpen((v) => !v);
         }}
-        className="relative h-14 w-14 rounded-[14px] border border-white/[0.08] bg-white/[0.04] backdrop-blur-[14px] flex items-center justify-center hover:border-orange-500/35 hover:bg-orange-500/10 transition-all shadow-[0_20px_60px_rgba(0,0,0,0.6)]"
+        className="fixed bottom-5 right-5 h-14 w-14 rounded-[14px] border border-white/[0.08] bg-white/[0.04] backdrop-blur-[14px] flex items-center justify-center hover:border-orange-500/35 hover:bg-orange-500/10 transition-all shadow-[0_20px_60px_rgba(0,0,0,0.6)] z-[1001]"
         aria-label="Open chat"
       >
         <MessageCircle className="h-6 w-6 text-orange-400" />

@@ -6,7 +6,7 @@ import { useCurrency } from '@/contexts/CurrencyContext';
 import { apiFetch } from '@/lib/api';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { Loader2, Package, CheckCircle2, AlertCircle, Terminal, Copy, ArrowLeft, Download, ShieldCheck, Clock, XCircle, Ban, Flag } from 'lucide-react';
+import { Loader2, Package, CheckCircle2, AlertCircle, Terminal, Copy, ArrowLeft, Download, ShieldCheck, Clock, XCircle, Ban, Flag, MessageCircle } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 
@@ -201,7 +201,7 @@ export default function OrderDetailPage() {
         !order.commits.some(c2 => (c2.action === 'cancellation_approved' || c2.action === 'cancellation_declined') && new Date(c2.at) > new Date(c.at))
     );
 
-    const canRequestCancel = order && !['delivered', 'cancelled', 'refunded'].includes(order.status) && !hasPendingCancellation;
+    const canRequestCancel = order && order.status === 'pending' && !hasPendingCancellation;
 
     const handleRequestCancel = async () => {
         setCancelLoading(true);
@@ -353,6 +353,15 @@ export default function OrderDetailPage() {
                                         Open Dispute
                                     </button>
                                 )}
+                                <button
+                                    onClick={() => {
+                                        window.dispatchEvent(new CustomEvent('open-chat', { detail: { orderId: order.id } }));
+                                    }}
+                                    className="px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 text-xs font-black uppercase tracking-widest hover:bg-white/10 hover:border-white/20 transition-all flex items-center gap-2"
+                                >
+                                    <MessageCircle className="w-4 h-4" />
+                                    Open Chat
+                                </button>
                             </div>
                         </div>
 

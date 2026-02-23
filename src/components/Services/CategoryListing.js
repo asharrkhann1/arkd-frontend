@@ -17,6 +17,7 @@ import {
     Maximize2,
     Trophy,
     ShoppingCart,
+    Zap,
 } from 'lucide-react';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { useWishlist } from '@/contexts/WishlistContext';
@@ -37,7 +38,14 @@ export default function CategoryListing({
     const { toggleWishlist, isInWishlist } = useWishlist();
     const [searchQuery, setSearchQuery] = useState('');
     const [priceRange, setPriceRange] = useState([0, 2000]);
-    const [sortBy, setSortBy] = useState('recent-added');
+    const [sortBy, setSortBy] = useState('default');
+    const [showTopOnly, setShowTopOnly] = useState(false);
+    const [sortOptions, setSortOptions] = useState({
+        priceHigh: false,
+        priceLow: false,
+        mostPurchased: false,
+        recentAdded: false
+    });
     const [localPage, setLocalPage] = useState(1);
     const [activeFilters, setActiveFilters] = useState({});
     const [openDropdowns, setOpenDropdowns] = useState({});
@@ -141,6 +149,7 @@ export default function CategoryListing({
         return initialItems.filter(item => {
             const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase());
             const matchesPrice = Number(item.price) >= priceRange[0] && Number(item.price) <= priceRange[1];
+            const matchesTopFilter = !showTopOnly || item.top_visible;
 
             const matchesDynamic = Object.entries(activeFilters).every(([key, filterVal]) => {
                 const specItem = item.specs?.[key];
@@ -155,18 +164,30 @@ export default function CategoryListing({
                 }
             });
 
-            return matchesSearch && matchesPrice && matchesDynamic;
+            return matchesSearch && matchesPrice && matchesTopFilter && matchesDynamic;
         });
-    }, [initialItems, searchQuery, priceRange, activeFilters]);
+    }, [initialItems, searchQuery, priceRange, showTopOnly, activeFilters]);
 
     const sortedItems = useMemo(() => {
-        const items = [...filteredItems];
-        if (sortBy === 'price-high') return items.sort((a, b) => Number(b.price) - Number(a.price));
-        if (sortBy === 'price-low') return items.sort((a, b) => Number(a.price) - Number(b.price));
-        if (sortBy === 'most-purchased') return items.sort((a, b) => (b.purchases_count || 0) - (a.purchases_count || 0));
-        if (sortBy === 'recent-added') return items.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+        let items = [...filteredItems];
+        
+        // Apply checkbox-based sorting in order
+        if (sortOptions.priceHigh) {
+            items = items.sort((a, b) => Number(b.price) - Number(a.price));
+        }
+        if (sortOptions.priceLow) {
+            items = items.sort((a, b) => Number(a.price) - Number(b.price));
+        }
+        if (sortOptions.mostPurchased) {
+            items = items.sort((a, b) => (b.purchases_count || 0) - (a.purchases_count || 0));
+        }
+        if (sortOptions.recentAdded) {
+            items = items.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+        }
+        
+        // If no sorting options selected, use backend order (top_visible + rank)
         return items;
-    }, [filteredItems, sortBy]);
+    }, [filteredItems, sortOptions]);
 
     const totalFilteredItems = sortedItems.length;
     const calculatedTotalPages = Math.ceil(totalFilteredItems / ITEMS_PER_PAGE);
@@ -233,17 +254,24 @@ export default function CategoryListing({
                             <span className="text-white font-bold">{totalFilteredItems}</span> items
                         </p>
 
+                        {/* Show Top Only Toggle */}
+                        <button
+                            onClick={() => { setShowTopOnly(!showTopOnly); setLocalPage(1); }}
+                            className={`flex items-center gap-2 px-3 py-2 bg-black border rounded-xl text-xs transition-all ${showTopOnly ? 'border-yellow-500/50 text-yellow-400 bg-yellow-500/5' : 'border-white/10 text-gray-300 hover:border-yellow-500/30'
+                                }`}
+                        >
+                            <Trophy className="w-3.5 h-3.5" />
+                            <span className="text-[10px] uppercase font-bold whitespace-nowrap">Top Only</span>
+                        </button>
+
                         {/* Filter-Style Sort Dropdown */}
                         <div className="relative" ref={el => dropdownRefs.current['sort'] = el}>
                             <button
                                 onClick={() => toggleDropdown('sort')}
-                                className={`flex items-center gap-2 px-3 py-2 bg-black border rounded-xl text-xs transition-all ${sortBy !== 'recent-added' ? 'border-orange-500/50 text-orange-400' : 'border-white/10 text-gray-300 hover:border-orange-500/30'
+                                className={`flex items-center gap-2 px-3 py-2 bg-black border rounded-xl text-xs transition-all ${Object.values(sortOptions).some(v => v) ? 'border-orange-500/50 text-orange-400' : 'border-white/10 text-gray-300 hover:border-orange-500/30'
                                     }`}
                             >
                                 <span className="text-[10px] uppercase font-bold">Sort</span>
-                                {/* <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-orange-500/20 text-orange-400">
-                                    {sortBy === 'recent-added' ? '🆕' : sortBy === 'most-purchased' ? '🔥' : sortBy === 'price-high' ? '💎' : '💰'}
-                                </span> */}
                                 <ChevronDown className={`w-3 h-3 transition-transform ${openDropdowns['sort'] ? 'rotate-180' : ''}`} />
                             </button>
 
@@ -257,35 +285,33 @@ export default function CategoryListing({
                                         className="absolute top-full mt-2 left-0 w-48 bg-gradient-to-b from-[#1a1a1f] to-[#141419] border border-white/[0.12] rounded-xl shadow-[0_0_40px_rgba(0,0,0,0.4)] z-50 p-2"
                                     >
                                         {[
-                                            { value: 'recent-added', label: 'Recent Added' },
-                                            { value: 'most-purchased', label: 'Most Purchased' },
-                                            { value: 'price-high', label: 'Price: High → Low' },
-                                            { value: 'price-low', label: 'Price: Low → High' }
+                                            { key: 'recentAdded', label: 'Recent Added' },
+                                            { key: 'mostPurchased', label: 'Most Purchased' },
+                                            { key: 'priceHigh', label: 'Price: High → Low' },
+                                            { key: 'priceLow', label: 'Price: Low → High' }
                                         ].map((option) => (
                                             <label
-                                                key={option.value}
+                                                key={option.key}
                                                 className="relative flex items-center gap-3 p-2 rounded-lg cursor-pointer hover:bg-white/5 transition-colors"
                                             >
                                                 <input
-                                                    type="radio"
-                                                    name="sort"
-                                                    value={option.value}
-                                                    checked={sortBy === option.value}
+                                                    type="checkbox"
+                                                    checked={sortOptions[option.key]}
                                                     onChange={(e) => {
-                                                        setSortBy(e.target.value);
-                                                        setOpenDropdowns(prev => ({ ...prev, sort: false }));
+                                                        setSortOptions(prev => ({ ...prev, [option.key]: e.target.checked }));
+                                                        setLocalPage(1);
                                                     }}
                                                     className="sr-only"
                                                 />
-                                                <div className={`w-4 h-4 border-2 rounded-full transition-all ${sortBy === option.value
+                                                <div className={`w-4 h-4 border-2 rounded transition-all ${sortOptions[option.key]
                                                     ? 'border-orange-500 bg-orange-500'
                                                     : 'border-gray-600'
                                                     }`}>
-                                                    {sortBy === option.value && (
-                                                        <div className="w-2 h-2 bg-white rounded-full m-0.5" />
+                                                    {sortOptions[option.key] && (
+                                                        <div className="w-2.5 h-2.5 bg-white rounded-sm m-0.5" />
                                                     )}
                                                 </div>
-                                                <span className={`text-xs font-medium ${sortBy === option.value ? 'text-orange-400' : 'text-gray-400'
+                                                <span className={`text-xs font-medium ${sortOptions[option.key] ? 'text-orange-400' : 'text-gray-400'
                                                     }`}>
                                                     {option.label}
                                                 </span>
@@ -498,7 +524,8 @@ export default function CategoryListing({
     );
 }
 
-function ProductCard({ item, type, category, formatPrice, selectedCurrency, toggleWishlist, isInWishlist }) {
+// ─── ACCOUNTS CARD (Image 1 style) ───
+function AccountsCard({ item, type, category, formatPrice, selectedCurrency }) {
     const [isInfoOpen, setIsInfoOpen] = useState(false);
     const [currentImgIndex, setCurrentImgIndex] = useState(0);
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
@@ -517,32 +544,24 @@ function ProductCard({ item, type, category, formatPrice, selectedCurrency, togg
         return all;
     }, [item.thumbnail_image, item.images]);
 
-    const nextImg = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setCurrentImgIndex(prev => (prev + 1) % images.length);
-    };
+    const nextImg = (e) => { e.preventDefault(); e.stopPropagation(); setCurrentImgIndex(prev => (prev + 1) % images.length); };
+    const prevImg = (e) => { e.preventDefault(); e.stopPropagation(); setCurrentImgIndex(prev => (prev - 1 + images.length) % images.length); };
 
-    const prevImg = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setCurrentImgIndex(prev => (prev - 1 + images.length) % images.length);
-    };
+    const isInStock = item.quantity_available > 0;
+    const stockText = item.quantity_available > 0 ? `${item.quantity_available} In Stock` : 'Out of Stock';
+    const deliveryText = (item.delivery_type === 'auto' || item.delivery_type === 'instant') ? 'Instant' : (item.delivery_time || 'Instant');
 
     return (
         <>
             <div className="group bg-[#0a0a0a] border border-white/5 rounded-[2.5rem] hover:border-orange-500/50 transition-all hover:-translate-y-2 shadow-2xl relative overflow-hidden">
-                {/* Image & Overlay Container */}
+                {/* Image Section */}
                 <div className="aspect-[4/3] relative">
-                    {/* Image Layer (Clipped) */}
                     <Link href={productHref} className="block absolute inset-0 overflow-hidden rounded-t-[2.5rem]">
                         <img
                             src={images[currentImgIndex]}
                             alt={item.title}
                             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                         />
-
-                        {/* Navigation Arrows (Inside Clip) */}
                         {images.length > 1 && (
                             <div className="absolute inset-0 flex items-center justify-between px-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
                                 <button onClick={prevImg} className="p-3 bg-black/80 backdrop-blur-xl rounded-full text-white hover:bg-orange-500 transition-all pointer-events-auto border border-white/5 shadow-2xl">
@@ -555,10 +574,11 @@ function ProductCard({ item, type, category, formatPrice, selectedCurrency, togg
                         )}
                     </Link>
 
-                    {/* Badges Layer (NOT Clipped - to allow dropdowns) */}
+                    {/* Badges */}
                     <div className="absolute inset-0 pointer-events-none z-20">
-                        {/* Top Left: Info & Delivery Type */}
-                        <div className="absolute top-6 left-6 flex flex-col gap-2 pointer-events-auto">
+
+                        {/* Top Left: Info */}
+                        <div className="absolute top-6 left-6 pointer-events-auto">
                             <div onMouseEnter={() => setIsInfoOpen(true)} onMouseLeave={() => setIsInfoOpen(false)} className="relative">
                                 <button className="p-2 bg-black/80 backdrop-blur-xl rounded-xl text-white border border-white/10 hover:bg-orange-500 hover:border-orange-500 transition-all shadow-xl">
                                     <Info className="w-4 h-4" />
@@ -569,25 +589,25 @@ function ProductCard({ item, type, category, formatPrice, selectedCurrency, togg
                                             initial={{ opacity: 0, scale: 0.9, y: 10 }}
                                             animate={{ opacity: 1, scale: 1, y: 0 }}
                                             exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                                            className="absolute top-full left-0 mt-2 w-64 bg-black/98 backdrop-blur-3xl border border-white/10 rounded-2xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 overflow-hidden"
+                                            className="absolute top-full left-0 mt-2 w-64 bg-black/98 backdrop-blur-3xl border border-white/10 rounded-2xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50"
                                         >
                                             <div className="space-y-4">
                                                 <div className="flex items-center justify-between border-b border-white/5 pb-2">
                                                     <p className="text-[10px] font-black uppercase text-orange-500 tracking-widest">Product Intel</p>
                                                     <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
                                                 </div>
-                                                <div className="grid grid-cols-1 gap-1.5 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
+                                                <div className="grid grid-cols-1 gap-1.5 max-h-[300px] overflow-y-auto pr-1">
                                                     <div className="flex justify-between items-center bg-white/[0.03] p-2 rounded-lg border border-white/5">
                                                         <span className="text-[9px] font-bold text-gray-500 uppercase">Category</span>
                                                         <span className="text-[9px] font-black text-white uppercase">{item.type || 'Service'}</span>
                                                     </div>
                                                     <div className="flex justify-between items-center bg-white/[0.03] p-2 rounded-lg border border-white/5">
                                                         <span className="text-[9px] font-bold text-gray-500 uppercase">Delivery</span>
-                                                        <span className="text-[9px] font-black text-white uppercase">{(item.delivery_type === 'auto' || item.delivery_type === 'instant') ? 'Instant' : (item.delivery_time || 'Instant')}</span>
+                                                        <span className="text-[9px] font-black text-white uppercase">{deliveryText}</span>
                                                     </div>
                                                     <div className="flex justify-between items-center bg-white/[0.03] p-2 rounded-lg border border-white/5">
                                                         <span className="text-[9px] font-bold text-gray-500 uppercase">Stock</span>
-                                                        <span className="text-[9px] font-black text-white uppercase">{item.stock_mode === 'unlimited' ? 'In Stock' : (item.quantity_available > 0 ? `${item.quantity_available} Units` : 'Out')}</span>
+                                                        <span className="text-[9px] font-black text-white uppercase">{stockText}</span>
                                                     </div>
                                                     {item.purchases_count > 0 && (
                                                         <div className="flex justify-between items-center bg-white/[0.03] p-2 rounded-lg border border-white/5">
@@ -615,25 +635,23 @@ function ProductCard({ item, type, category, formatPrice, selectedCurrency, togg
                             </div>
                         </div>
 
-                        {/* Top Right: Quantity Available */}
+                        {/* Top Right: Stock Badge */}
                         <div className="absolute top-6 right-6 pointer-events-auto">
-                            <div className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase backdrop-blur-xl border shadow-lg ${(item.stock_mode !== 'limited' || (item.quantity_available > 0))
+                            <div className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase backdrop-blur-xl border shadow-lg ${isInStock
                                 ? 'bg-green-500/20 border-green-500/50 text-green-400'
                                 : 'bg-red-500/20 border-red-500/50 text-red-500'
                                 }`}>
-                                {item.stock_mode === 'unlimited' ? 'In Stock' : (item.quantity_available > 0 ? `${item.quantity_available} In Stock` : 'Out of Stock')}
+                                {stockText}
                             </div>
                         </div>
 
-                        {/* Bottom Left: Delivery Time */}
+                        {/* Bottom Left: Delivery */}
                         <div className="absolute bottom-6 left-6 flex items-center gap-2 px-3 py-1.5 bg-black/90 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl pointer-events-auto">
                             <Clock className="w-3.5 h-3.5 text-orange-500" />
-                            <span className="text-[10px] font-black uppercase text-white tracking-[0.1em]">
-                                {(item.delivery_type === 'auto' || item.delivery_type === 'instant') ? 'Instant' : (item.delivery_time || 'Instant')}
-                            </span>
+                            <span className="text-[10px] font-black uppercase text-white tracking-[0.1em]">{deliveryText}</span>
                         </div>
 
-                        {/* Bottom Right: Maximize */}
+                        {/* Bottom Right: Expand */}
                         <button
                             onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsLightboxOpen(true); }}
                             className="absolute bottom-6 right-6 p-3 bg-black/80 backdrop-blur-xl rounded-2xl text-white hover:bg-orange-500 hover:scale-110 transition-all shadow-xl border border-white/10 pointer-events-auto"
@@ -643,8 +661,8 @@ function ProductCard({ item, type, category, formatPrice, selectedCurrency, togg
                     </div>
                 </div>
 
+                {/* Content */}
                 <div className="p-8">
-                    {/* Meta Row */}
                     <div className="flex items-center justify-between gap-3 mb-3 text-[10px] font-black uppercase tracking-[0.2em] text-orange-500/80">
                         <div className="flex items-center gap-2 min-w-0">
                             <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
@@ -652,7 +670,6 @@ function ProductCard({ item, type, category, formatPrice, selectedCurrency, togg
                             <span className="text-gray-800 mx-1">•</span>
                             <span className="truncate">{item.product_category || category || 'Global'}</span>
                         </div>
-                        {/* Purchases or Hot Badge */}
                         <div className="flex items-center gap-2">
                             {item.purchases_count > 0 ? (
                                 <span className="text-[9px] font-black text-orange-500">{item.purchases_count} sold</span>
@@ -665,12 +682,12 @@ function ProductCard({ item, type, category, formatPrice, selectedCurrency, togg
                     </div>
 
                     <Link href={productHref}>
-                        <h3 className="text-xl font-black mb-6 line-clamp-2 group-hover:text-orange-500 transition-colors uppercase italic leading-[1.1] tracking-tighter min-h-[3rem]">
+                        <h3 className="text-xl font-black mb-3 line-clamp-2 group-hover:text-orange-500 transition-colors uppercase italic leading-[1.1] tracking-tighter min-h-[3rem]">
                             {item.title?.toUpperCase()}
                         </h3>
                     </Link>
 
-                    <div className="mb-8">
+                    <div className="mb-6">
                         <p className="text-[11px] text-gray-400 font-medium line-clamp-1 italic uppercase tracking-wider">
                             {item.description || `Premium quality ${item.title} with verified security standards`}...
                         </p>
@@ -678,22 +695,18 @@ function ProductCard({ item, type, category, formatPrice, selectedCurrency, togg
 
                     <div className="flex items-center justify-between pt-6 border-t border-white/5">
                         <div className="space-y-0.5">
-                            <div className="flex flex-col">
-                                <p className="text-2xl font-black italic text-white tracking-tighter leading-none">
-                                    {formatPrice(item.price)}
+                            <p className="text-2xl font-black italic text-white tracking-tighter leading-none">
+                                {formatPrice(item.price)}
+                            </p>
+                            {selectedCurrency !== 'USD' && (
+                                <p className="text-[9px] font-bold text-gray-600 mt-1 uppercase tracking-wider">
+                                    USD: <span className="text-gray-500">${Number(item.price).toFixed(2)}</span>
                                 </p>
-                                {selectedCurrency !== 'USD' && (
-                                    <p className="text-[9px] font-bold text-gray-600 mt-1 uppercase tracking-wider">
-                                        USD Equivalent: <span className="text-gray-500">${Number(item.price).toFixed(2)}</span>
-                                    </p>
-                                )}
-                            </div>
+                            )}
                         </div>
-
                         <Link
                             href={productHref}
                             className="p-4 rounded-2xl transition-all shadow-[0_10px_25px_rgba(234,88,12,0.3)] hover:shadow-[0_15px_35px_rgba(234,88,12,0.4)] group-hover:scale-105 active:scale-95 border bg-[#0a0a0a] border-white/10 text-gray-400 hover:text-orange-500 hover:border-orange-500/50"
-                            aria-label="Visit product"
                         >
                             <ArrowUpRight className="w-5 h-5" />
                         </Link>
@@ -739,4 +752,150 @@ function ProductCard({ item, type, category, formatPrice, selectedCurrency, togg
             </AnimatePresence>
         </>
     );
+}
+
+// ─── TOPUPS CARD (Image 2 style) ───
+function TopupsCard({ item, type, category, formatPrice, selectedCurrency }) {
+    const productSlug = item.slug || item.id;
+    const productHref = `/services/${type}/${category}/${productSlug}`;
+
+    return (
+        <div className="group bg-[#0a0a0a] border border-white/5 rounded-3xl hover:border-blue-500/30 transition-all hover:-translate-y-1 shadow-xl relative overflow-hidden">
+
+            {/* Top Section - Icon + Title */}
+            <div className="p-6 text-center">
+                {/* Icon */}
+                <div className="flex justify-center mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-[#1a1a2e] border border-white/10 flex items-center justify-center">
+                        <Zap className="w-6 h-6 text-yellow-400" />
+                    </div>
+                </div>
+
+                {/* Amount / Title */}
+                <h3 className="text-2xl font-black text-white tracking-tight leading-none mb-1">
+                    {item.title}
+                </h3>
+                <p className="text-sm text-gray-400 font-medium">
+                    {item.product_category || category || 'Points'}
+                </p>
+            </div>
+
+            {/* Divider */}
+            <div className="mx-6 border-t border-white/5" />
+
+            {/* Bottom Section - Price + Buy Now */}
+            <div className="p-6 text-center">
+                {/* Price */}
+                <div className="mb-4">
+                    <span className="text-2xl font-black text-white italic tracking-tight">
+                        {formatPrice(item.price)}
+                    </span>
+                    {selectedCurrency !== 'USD' && (
+                        <span className="text-xs text-gray-500 ml-1 font-bold">
+                            USD
+                        </span>
+                    )}
+                </div>
+
+                {/* Buy Now Button */}
+                <Link
+                    href={productHref}
+                    className="inline-flex items-center justify-center gap-2 w-full px-6 py-3 bg-gradient-to-r from-blue-900/50 to-blue-800/50 border border-blue-500/30 hover:border-blue-400/50 text-white font-bold text-sm uppercase tracking-wider rounded-full transition-all hover:from-blue-800/60 hover:to-blue-700/60 group-hover:shadow-[0_0_20px_rgba(59,130,246,0.2)]"
+                >
+                    Buy Now
+                    <ArrowUpRight className="w-4 h-4" />
+                </Link>
+            </div>
+        </div>
+    );
+}
+
+// ─── GIFTCARDS CARD (Image 3 style) ───
+function GiftcardsCard({ item, type, category, formatPrice }) {
+    const productSlug = item.slug || item.id;
+    const productHref = `/services/${type}/${category}/${productSlug}`;
+
+    const images = useMemo(() => {
+        const all = [];
+        if (item.thumbnail_image) all.push(item.thumbnail_image);
+        if (item.images && Array.isArray(item.images)) {
+            item.images.forEach(img => {
+                if (img !== item.thumbnail_image && !all.includes(img)) all.push(img);
+            });
+        }
+        return all;
+    }, [item.thumbnail_image, item.images]);
+
+    const hasImage = images.length > 0;
+
+    return (
+        <Link href={productHref} className="group block">
+            <div className="relative aspect-[4/5] rounded-2xl overflow-hidden bg-[#0a0a0a] border border-white/5 hover:border-orange-500/20 transition-all hover:-translate-y-2 shadow-xl">
+                {/* Background */}
+                <div className="absolute inset-0">
+                    {hasImage ? (
+                        <img
+                            src={images[0]}
+                            alt={item.title}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        />
+                    ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-purple-900/40 via-orange-900/20 to-black" />
+                    )}
+                </div>
+
+                {/* Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90" />
+
+                {/* Content */}
+                <div className="absolute inset-0 p-5 flex flex-col justify-between z-10">
+                    {/* Top Badge */}
+                    <div className="flex justify-start">
+                        <span className="px-3 py-1 bg-orange-500/90 backdrop-blur-sm text-white text-[10px] font-black uppercase tracking-wider rounded-full">
+                            {(item.product_category || category || 'Gift Card').toUpperCase()}
+                        </span>
+                    </div>
+
+                    {/* Bottom Content */}
+                    <div className="space-y-3">
+                        <h3 className="text-xl font-black text-white uppercase tracking-tight leading-tight drop-shadow-lg">
+                            {item.title}
+                        </h3>
+
+                        {/* Price */}
+                        <p className="text-lg font-black text-white/80 italic tracking-tight">
+                            {formatPrice(item.price)}
+                        </p>
+
+                        {/* View Button */}
+                        <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 px-4 py-2.5 bg-white/10 backdrop-blur-md border border-white/20 rounded-full group-hover:bg-orange-500 group-hover:border-orange-500 transition-all duration-300">
+                                <span className="text-sm font-bold text-white">View</span>
+                                <ChevronRight className="w-4 h-4 text-white transition-transform duration-300 group-hover:translate-x-1" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Glow Effect */}
+                <div className="absolute -top-20 -right-20 w-40 h-40 bg-orange-500/20 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+            </div>
+        </Link>
+    );
+}
+
+// ─── PRODUCT CARD SWITCHER ───
+function ProductCard({ item, type, category, formatPrice, selectedCurrency, toggleWishlist, isInWishlist }) {
+    const normalizedType = type?.replace('-', '').toLowerCase();
+
+    if (normalizedType === 'topups') {
+        return <TopupsCard item={item} type={type} category={category} formatPrice={formatPrice} selectedCurrency={selectedCurrency} />;
+    }
+
+    if (normalizedType === 'giftcards') {
+        return <GiftcardsCard item={item} type={type} category={category} formatPrice={formatPrice} />;
+    }
+
+    // Default: accounts card
+    return <AccountsCard item={item} type={type} category={category} formatPrice={formatPrice} selectedCurrency={selectedCurrency} />;
 }

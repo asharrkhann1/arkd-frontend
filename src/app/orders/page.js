@@ -5,9 +5,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { Loader2, Package, ChevronRight, Search } from 'lucide-react';
+import { Loader2, Package, ChevronRight, Search, MessageCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
+import { getProductCategoryLogo } from '@/constants/productCategoryLogos';
 
 export default function OrdersPage() {
     const { user, loading: authLoading } = useAuth();
@@ -92,9 +93,20 @@ export default function OrdersPage() {
                             >
                                 <Link href={`/orders/${order.id}`} className="group block bg-[#0a0a0a] border border-white/5 rounded-3xl p-6 hover:border-orange-500/30 transition-all hover:bg-white/[0.02]">
                                     <div className="flex flex-col md:flex-row items-center gap-6">
-                                        {/* Icon/Image Placeholder */}
-                                        <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                                            <Package className="w-8 h-8 text-gray-600 group-hover:text-orange-500 transition-colors" />
+                                        {/* Product Category Logo */}
+                                        <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform overflow-hidden">
+                                            {order.product_snapshot?.product_category ? (
+                                                <img 
+                                                    src={getProductCategoryLogo(order.product_snapshot.product_category)}
+                                                    alt={order.product_snapshot.product_category}
+                                                    className="w-full h-full object-contain p-2"
+                                                    onError={(e) => {
+                                                        e.target.style.display = 'none';
+                                                        e.target.nextSibling.style.display = 'flex';
+                                                    }}
+                                                />
+                                            ) : null}
+                                            <Package className="w-8 h-8 text-gray-600 group-hover:text-orange-500 transition-colors" style={{display: order.product_snapshot?.product_category ? 'none' : 'flex'}} />
                                         </div>
 
                                         {/* info */}
@@ -137,6 +149,19 @@ export default function OrdersPage() {
                                         <div className="text-right">
                                             <p className="text-xl font-black tracking-tight">{formatPrice(order.total_price || order.price)}</p>
                                         </div>
+
+                                        <button
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                window.dispatchEvent(new CustomEvent('open-chat', { detail: { orderId: order.id } }));
+                                            }}
+                                            className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-orange-400 hover:border-orange-500/30 transition-all flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest shrink-0"
+                                            title="Open Chat"
+                                        >
+                                            <MessageCircle className="w-3.5 h-3.5" />
+                                            Chat
+                                        </button>
 
                                         <ChevronRight className="w-5 h-5 text-gray-600 group-hover:text-white transition-colors" />
                                     </div>

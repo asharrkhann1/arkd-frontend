@@ -19,7 +19,8 @@ import {
     Check,
     X,
     Minus,
-    Plus
+    Plus,
+    Trophy
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
@@ -39,9 +40,7 @@ export default function ProductDetail({ product, type, category }) {
     const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
     const [selectedQuantity, setSelectedQuantity] = useState(1);
 
-    const maxQuantity = product.stock_mode === 'limited'
-        ? (product.quantity_available || 1)
-        : 99;
+    const maxQuantity = Number(product.quantity_available) || 1;
 
     // Image handling
     const images = useMemo(() => {
@@ -60,7 +59,7 @@ export default function ProductDetail({ product, type, category }) {
     const [mainImage, setMainImage] = useState(images[0]);
 
     const isVerified = user?.is_verified;
-    const isOutOfStock = product.stock_mode === 'limited' && (product.quantity_available || 0) < 1;
+    const isOutOfStock = (Number(product.quantity_available) || 0) < 1;
 
     const handleOrderClick = () => {
         if (!user) return;
@@ -120,6 +119,11 @@ export default function ProductDetail({ product, type, category }) {
                                         <Zap className="w-4 h-4 fill-current" /> Instant Delivery
                                     </div>
                                 )}
+                                {product.rank && product.rank > 0 && (
+                                    <div className="px-5 py-2 bg-gradient-to-r from-yellow-600 to-orange-600 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white flex items-center gap-2 shadow-[0_0_30px_rgba(251,191,36,0.4)]">
+                                        <Trophy className="w-4 h-4 fill-current" /> Rank #{product.rank}
+                                    </div>
+                                )}
                             </div>
                         </motion.div>
 
@@ -175,23 +179,19 @@ export default function ProductDetail({ product, type, category }) {
                                             </span>
                                         )}
                                     </div>
-                                    <div className={`flex items-center gap-3 py-1 px-4 rounded-full w-fit border ${(product.stock_mode !== 'limited' || (product.quantity_available != null && product.quantity_available > 0))
+                                    <div className={`flex items-center gap-3 py-1 px-4 rounded-full w-fit border ${(Number(product.quantity_available) || 0) > 0
                                         ? 'bg-green-500/10 border-green-500/20'
                                         : 'bg-red-500/10 border-red-500/20'
                                         }`}>
-                                        <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${(product.stock_mode !== 'limited' || (product.quantity_available != null && product.quantity_available > 0))
+                                        <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${(Number(product.quantity_available) || 0) > 0
                                             ? 'bg-green-500'
                                             : 'bg-red-500'
                                             }`} />
-                                        <span className={`text-[10px] font-black uppercase tracking-widest leading-none ${(product.stock_mode !== 'limited' || (product.quantity_available != null && product.quantity_available > 0))
+                                        <span className={`text-[10px] font-black uppercase tracking-widest leading-none ${(Number(product.quantity_available) || 0) > 0
                                             ? 'text-green-500'
                                             : 'text-red-500'
                                             }`}>
-                                            {product.stock_mode === 'unlimited'
-                                                ? 'IN STOCK'
-                                                : product.stock_mode === 'limited'
-                                                    ? ((product.quantity_available != null && product.quantity_available > 0) ? `${product.quantity_available} IN STOCK` : 'OUT OF STOCK')
-                                                    : 'IN STOCK'}
+                                            {(Number(product.quantity_available) || 0) > 0 ? `${Number(product.quantity_available) || 0} IN STOCK` : 'OUT OF STOCK'}
                                         </span>
                                     </div>
                                 </div>
@@ -346,6 +346,18 @@ function OrderConfirmationModal({ isOpen, onClose, product, user, formatPrice, r
     const handleConfirm = async () => {
         setIsProcessing(true);
         try {
+            // Fetch latest product data to get current stock
+            const response = await apiFetch(`/${product.id}`);
+            const latestProduct = response.product || response; // Handle both response formats
+
+            // Double-check stock with latest data
+            const availableStock = Number(latestProduct.quantity_available) || 0;
+            
+            if (availableStock < quantity) {
+                toast.error(`Only ${availableStock} items available in stock`);
+                return;
+            }
+
             const payload = {
                 product_id: product.id,
                 quantity,
@@ -520,23 +532,21 @@ function OrderConfirmationModal({ isOpen, onClose, product, user, formatPrice, r
                                             </button>
                                         </div>
                                     </div>
-                                    {product.stock_mode === 'limited' && (
-                                        <p className="text-[9px] font-bold text-gray-600 uppercase tracking-widest text-right">
-                                            {product.quantity_available} available
-                                        </p>
-                                    )}
+                                    <p className="text-[9px] font-bold text-gray-600 uppercase tracking-widest text-right">
+                                        {Number(product.quantity_available) || 0} available
+                                    </p>
+                                </div>
 
-                                    <div className="pt-4 border-t border-white/5 space-y-1">
-                                        {quantity > 1 && (
-                                            <div className="flex justify-between items-center text-gray-500 text-xs">
-                                                <span className="font-bold uppercase tracking-widest">Unit Price</span>
-                                                <span className="font-black">{formatPrice(unitPrice)}</span>
-                                            </div>
-                                        )}
-                                        <div className="flex justify-between items-center text-orange-500">
-                                            <span className="font-black uppercase tracking-widest text-sm">Total</span>
-                                            <span className="font-black text-2xl">{formatPrice(totalPrice)}</span>
+                                <div className="pt-4 border-t border-white/5 space-y-1">
+                                    {quantity > 1 && (
+                                        <div className="flex justify-between items-center text-gray-500 text-xs">
+                                            <span className="font-bold uppercase tracking-widest">Unit Price</span>
+                                            <span className="font-black">{formatPrice(unitPrice)}</span>
                                         </div>
+                                    )}
+                                    <div className="flex justify-between items-center text-orange-500">
+                                        <span className="font-black uppercase tracking-widest text-sm">Total</span>
+                                        <span className="font-black text-2xl">{formatPrice(totalPrice)}</span>
                                     </div>
                                 </div>
 

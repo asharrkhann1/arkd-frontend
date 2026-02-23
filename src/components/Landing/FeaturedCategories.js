@@ -4,9 +4,11 @@ import Link from 'next/link';
 import { ArrowRight, Sparkles, Search, X } from 'lucide-react';
 import { useData } from '@/contexts/DataContext';
 import { serviceConfigs } from '@/constants/servicesConfig';
+import { getGameIcon, getGameColors } from '@/constants/gameIcons';
+import { getProductCategoryLogo, getAdditionalLogos } from '@/constants/productCategoryLogos';
 
 const FeaturedCategories = () => {
-    const { services, serviceCategories } = useData();
+    const { services, serviceCategories, categoryToServicesMap } = useData();
     const [searchQuery, setSearchQuery] = useState('');
 
     const activeServices = services
@@ -16,59 +18,66 @@ const FeaturedCategories = () => {
         }).filter(item => item.config)
         : [];
 
-    // Exact-match search results for preview bar
-    const exactMatches = useMemo(() => {
+    // Fuzzy search function
+    const fuzzyMatch = (text, query) => {
+        if (!text || !query) return false;
+        const lowerText = text.toLowerCase();
+        const lowerQuery = query.toLowerCase();
+
+        // Exact match
+        if (lowerText.includes(lowerQuery)) return true;
+
+        // Fuzzy match - check if all characters in query appear in order in text
+        let queryIndex = 0;
+        for (let i = 0; i < lowerText.length && queryIndex < lowerQuery.length; i++) {
+            if (lowerText[i] === lowerQuery[queryIndex]) {
+                queryIndex++;
+            }
+        }
+        return queryIndex === lowerQuery.length;
+    };
+
+    // Search results with fuzzy matching
+    const searchResults = useMemo(() => {
         if (!searchQuery.trim()) return [];
-        
-        const query = searchQuery.toLowerCase();
-        const matches = [];
-        
-        activeServices.forEach(({ type, config: svc }) => {
-            // Check if service name matches exactly
-            if (svc.name.toLowerCase() === query || svc.title.toLowerCase() === query) {
-                const cats = serviceCategories[type] || [];
-                matches.push({
-                    type,
-                    config: svc,
-                    categories: cats,
-                    isExact: true
+
+        const query = searchQuery.trim();
+        const results = [];
+
+        // Search in categories first (priority)
+        Object.entries(categoryToServicesMap || {}).forEach(([category, serviceTypes]) => {
+            if (fuzzyMatch(category, query)) {
+                results.push({
+                    type: 'category',
+                    title: category,
+                    serviceTypes: serviceTypes,
+                    isExact: category.toLowerCase() === query.toLowerCase()
                 });
             }
-            // Check if any category matches exactly
-            else {
+        });
+
+        // Then search in service names
+        activeServices.forEach(({ type, config: svc }) => {
+            if (fuzzyMatch(svc.name, query) || fuzzyMatch(svc.title, query)) {
                 const cats = serviceCategories[type] || [];
-                const matchingCats = cats.filter(cat => cat.toLowerCase() === query);
-                if (matchingCats.length > 0) {
-                    matches.push({
-                        type,
-                        config: svc,
-                        categories: matchingCats,
-                        isExact: false,
-                        matchedCategory: query
-                    });
-                }
+                results.push({
+                    type: 'service',
+                    title: svc.name,
+                    config: svc,
+                    categories: cats,
+                    serviceType: type,
+                    isExact: svc.name.toLowerCase() === query.toLowerCase() || svc.title.toLowerCase() === query.toLowerCase()
+                });
             }
         });
-        
-        return matches;
-    }, [activeServices, searchQuery, serviceCategories]);
 
-    // Filter services and categories based on search (fallback)
-    const filteredServices = useMemo(() => {
-        if (!searchQuery.trim()) return activeServices;
-        
-        const query = searchQuery.toLowerCase();
-        
-        return activeServices.filter(({ type, config: svc }) => {
-            // Check if service name matches
-            if (svc.name.toLowerCase().includes(query)) return true;
-            if (svc.title.toLowerCase().includes(query)) return true;
-            
-            // Check if any category matches
-            const cats = serviceCategories[type] || [];
-            return cats.some(cat => cat.toLowerCase().includes(query));
+        // Sort results: exact matches first, then by relevance
+        return results.sort((a, b) => {
+            if (a.isExact && !b.isExact) return -1;
+            if (!a.isExact && b.isExact) return 1;
+            return 0;
         });
-    }, [activeServices, searchQuery, serviceCategories]);
+    }, [activeServices, searchQuery, serviceCategories, categoryToServicesMap]);
 
     return (
         <section className="py-20 relative overflow-hidden">
@@ -114,89 +123,136 @@ const FeaturedCategories = () => {
                             )}
                         </div>
                     </div>
-                    {/* Exact Match Preview Bar */}
-                    {searchQuery && exactMatches.length > 0 && (
+                    {/* Search Results */}
+                    {searchQuery && searchResults.length > 0 && (
                         <div className="mt-4 p-4 bg-gradient-to-b from-white/[0.06] to-white/[0.02] border border-white/[0.08] rounded-xl backdrop-blur-sm">
                             <div className="space-y-3">
-                                {exactMatches.map((match, idx) => {
-                                    const Icon = match.config.icon;
-                                    return (
-                                        <div key={`${match.type}-${idx}`} className="flex items-center gap-4">
-                                            {/* Service Icon & Name */}
-                                            <div className="flex items-center gap-3 flex-shrink-0">
-                                                <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${match.config.color} p-[1px]`}>
-                                                    <div className="w-full h-full rounded-lg bg-[#141419] flex items-center justify-center">
-                                                        <Icon className="w-4 h-4 text-white" />
+                                {searchResults.map((result, idx) => {
+                                    if (result.type === 'category') {
+                                        const GameIcon = getGameIcon(result.title);
+                                        const gameColors = getGameColors(result.title);
+                                        return (
+                                            <div key={`category-${result.title}-${idx}`} className="flex items-center gap-4">
+                                                {/* Game Icon */}
+                                                <div className="flex items-center gap-3 flex-shrink-0">
+                                                    <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${gameColors.dot} p-[1px]`}>
+                                                        <div className="w-full h-full rounded-lg bg-[#141419] flex items-center justify-center">
+                                                            <GameIcon className="w-4 h-4 text-white" />
+                                                        </div>
                                                     </div>
+                                                    <span className="text-sm font-black text-white uppercase tracking-wider">
+                                                        {result.title}
+                                                    </span>
                                                 </div>
-                                                <span className="text-sm font-black text-white uppercase tracking-wider">
-                                                    {match.matchedCategory || match.config.name}
-                                                </span>
+
+                                                {/* Available Services */}
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    {result.serviceTypes.map(serviceType => {
+                                                        const config = serviceConfigs[serviceType];
+                                                        if (!config) return null;
+                                                        const Icon = config.icon;
+                                                        return (
+                                                            <Link
+                                                                key={serviceType}
+                                                                href={`${config.href}/${result.title}`}
+                                                                className="px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06] text-xs font-semibold text-gray-400 hover:text-white hover:bg-orange-500/10 hover:border-orange-500/30 transition-all uppercase flex items-center gap-1"
+                                                                onClick={() => setSearchQuery('')}
+                                                            >
+                                                                <Icon className="w-3 h-3" />
+                                                                {config.name}
+                                                            </Link>
+                                                        );
+                                                    })}
+                                                </div>
                                             </div>
-                                            
-                                            {/* Subcategories in a row */}
-                                            <div className="flex items-center gap-2 flex-wrap">
-                                                {(match.isExact ? match.categories : match.categories).map((cat) => (
-                                                    <Link
-                                                        key={cat}
-                                                        href={`${match.config.href}/${cat}`}
-                                                        className="px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06] text-xs font-semibold text-gray-400 hover:text-white hover:bg-orange-500/10 hover:border-orange-500/30 transition-all uppercase"
-                                                        onClick={() => setSearchQuery('')}
-                                                    >
-                                                        {cat}
-                                                    </Link>
-                                                ))}
+                                        );
+                                    } else {
+                                        // Service result
+                                        const Icon = result.config.icon;
+                                        return (
+                                            <div key={`service-${result.serviceType}-${idx}`} className="flex items-center gap-4">
+                                                {/* Service Icon & Name */}
+                                                <div className="flex items-center gap-3 flex-shrink-0">
+                                                    <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${result.config.color} p-[1px]`}>
+                                                        <div className="w-full h-full rounded-lg bg-[#141419] flex items-center justify-center">
+                                                            <Icon className="w-4 h-4 text-white" />
+                                                        </div>
+                                                    </div>
+                                                    <span className="text-sm font-black text-white uppercase tracking-wider">
+                                                        {result.title}
+                                                    </span>
+                                                </div>
+
+                                                {/* Categories */}
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    {result.categories.slice(0, 4).map((cat) => (
+                                                        <Link
+                                                            key={cat}
+                                                            href={`${result.config.href}/${cat}`}
+                                                            className="px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06] text-xs font-semibold text-gray-400 hover:text-white hover:bg-orange-500/10 hover:border-orange-500/30 transition-all uppercase"
+                                                            onClick={() => setSearchQuery('')}
+                                                        >
+                                                            {cat}
+                                                        </Link>
+                                                    ))}
+                                                    {result.categories.length > 4 && (
+                                                        <div className="col-span-3 flex items-center justify-center mt-1">
+                                                            <Link
+                                                                href={result.config.href}
+                                                                className="px-2 py-1 rounded-lg bg-gradient-to-r from-orange-500/20 to-orange-600/20 border border-orange-500/30 text-[10px] font-bold text-orange-400 hover:from-orange-500/30 hover:to-orange-600/30 transition-all uppercase"
+                                                                onClick={() => setSearchQuery('')}
+                                                            >
+                                                                +{result.categories.length - 4} More
+                                                            </Link>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
-                                        </div>
-                                    );
+                                        );
+                                    }
                                 })}
                             </div>
                         </div>
                     )}
-                    
-                    {searchQuery && exactMatches.length === 0 && (
+
+                    {searchQuery && searchResults.length === 0 && (
                         <p className="text-center text-xs text-gray-500 mt-2">
-                            Found {filteredServices.length} matching {filteredServices.length === 1 ? 'service' : 'services'}
+                            No services or categories found
                         </p>
                     )}
                 </div>
 
-                {/* Premium Window-style cards */}
+                {/* Premium Window-style cards - Always show all services */}
                 <div className="flex gap-5 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide px-1 justify-center flex-wrap">
-                    {filteredServices.map(({ type, config: svc }) => {
+                    {activeServices.map(({ type, config: svc }) => {
                         const Icon = svc.icon;
                         const cats = serviceCategories[type] || [];
-                        
-                        // Filter categories if search is active
-                        const filteredCats = searchQuery.trim()
-                            ? cats.filter(cat => cat.toLowerCase().includes(searchQuery.toLowerCase()))
-                            : cats;
 
                         return (
                             <div
                                 key={svc.id}
-                                className="snap-start flex-shrink-0 w-[300px] rounded-2xl bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/[0.12] backdrop-blur-sm overflow-hidden flex flex-col group hover:border-orange-500/30 hover:shadow-[0_0_40px_rgba(249,115,22,0.15)] transition-all duration-500"
+                                className="snap-start flex-shrink-0 w-[280px] rounded-xl bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/[0.12] backdrop-blur-sm overflow-hidden flex flex-col group hover:border-orange-500/30 hover:shadow-[0_0_40px_rgba(249,115,22,0.15)] transition-all duration-500"
                             >
                                 {/* Premium Window Title Bar */}
                                 <Link
                                     href={svc.href}
-                                    className="flex items-center gap-3 px-5 py-4 bg-gradient-to-r from-white/[0.06] to-transparent border-b border-white/[0.08] hover:from-white/[0.08] transition-all"
+                                    className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-white/[0.06] to-transparent border-b border-white/[0.08] hover:from-white/[0.08] transition-all"
                                 >
                                     {/* Glowing accent dot */}
                                     <div className={`w-2.5 h-2.5 rounded-full bg-gradient-to-br ${svc.color} shadow-[0_0_10px_rgba(249,115,22,0.5)]`} />
-                                    
+
                                     {/* Premium Icon container */}
                                     <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${svc.color} p-[1px]`}>
                                         <div className="w-full h-full rounded-lg bg-[#141419] flex items-center justify-center">
                                             <Icon className="w-4 h-4 text-white" />
                                         </div>
                                     </div>
-                                    
+
                                     {/* Premium Title - UPPERCASE */}
-                                    <span className="flex-1 text-sm font-black text-white uppercase tracking-wider truncate">
+                                    <span className="flex-1 text-base font-black text-white uppercase tracking-wider truncate">
                                         {svc.name}
                                     </span>
-                                    
+
                                     {/* Badge */}
                                     {svc.badge && (
                                         <span className="px-2 py-1 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-md text-[9px] font-black uppercase shadow-lg">
@@ -206,50 +262,69 @@ const FeaturedCategories = () => {
                                 </Link>
 
                                 {/* Premium Content Area */}
-                                <div className="p-5 flex flex-col gap-4">
-                                    <div className="flex flex-wrap gap-2">
-                                        {filteredCats.length > 0 ? (
-                                            filteredCats.slice(0, 6).map((cat) => (
-                                                <Link
-                                                    key={cat}
-                                                    href={`${svc.href}/${cat}`}
-                                                    className="px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06] text-xs font-semibold text-gray-400 hover:text-white hover:bg-orange-500/10 hover:border-orange-500/30 transition-all uppercase"
-                                                >
-                                                    {cat}
-                                                </Link>
-                                            ))
-                                        ) : searchQuery ? (
-                                            <span className="text-xs text-gray-600 uppercase">No matching categories</span>
+                                <div className="p-3 flex flex-col gap-2">
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {cats.length > 0 ? (
+                                            cats.slice(0, 6).map((cat) => {
+                                                const logo = getProductCategoryLogo(cat);
+                                                return (
+                                                    <Link
+                                                        key={cat}
+                                                        href={`${svc.href}/${cat}`}
+                                                        className="group relative overflow-hidden rounded bg-white/[0.04] border border-white/[0.06] hover:border-orange-500/30 hover:bg-orange-500/10 transition-all duration-300 aspect-square flex items-center justify-center"
+                                                        title={cat}
+                                                    >
+                                                        {/* Logo image */}
+                                                        <img
+                                                            src={logo}
+                                                            alt={cat}
+                                                            className="w-8 h-8 object-contain opacity-60 group-hover:opacity-90 transition-opacity"
+                                                            onError={(e) => {
+                                                                e.target.src = '/logos/steam.png'; // Fallback
+                                                            }}
+                                                        />
+                                                    </Link>
+                                                );
+                                            })
                                         ) : (
-                                            <span className="text-xs text-gray-600 uppercase">No categories</span>
-                                        )}
-                                        {filteredCats.length > 6 && (
-                                            <Link
-                                                href={svc.href}
-                                                className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-orange-500/20 to-orange-600/20 border border-orange-500/30 text-xs font-bold text-orange-400 hover:from-orange-500/30 hover:to-orange-600/30 transition-all uppercase"
-                                            >
-                                                +{filteredCats.length - 6} More
-                                            </Link>
+                                            <div className="col-span-3 text-xs text-gray-600 uppercase text-center py-4">
+                                                No categories
+                                            </div>
                                         )}
                                     </div>
+
+                                    {/* +4 More section */}
+                                    {cats.length > 6 && (
+                                        <div className="grid grid-cols-4 gap-1 mt-1">
+                                            {getAdditionalLogos(4).map((logo, idx) => (
+                                                <div
+                                                    key={`additional-${idx}`}
+                                                    className="relative overflow-hidden rounded bg-white/[0.02] border border-white/[0.04] aspect-square flex items-center justify-center"
+                                                >
+                                                    <img
+                                                        src={logo}
+                                                        alt={`Additional service ${idx + 1}`}
+                                                        className="w-8 h-8 object-contain opacity-50"
+                                                    />
+                                                </div>
+                                            ))}
+                                            <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-orange-500/20 to-orange-600/20 border border-orange-500/30 aspect-square flex items-center justify-center group cursor-pointer">
+                                                <Link
+                                                    href={svc.href}
+                                                    className="absolute inset-0 flex items-center justify-center"
+                                                >
+                                                    <span className="text-lg font-black text-orange-400 group-hover:text-orange-300 transition-colors">
+                                                        +{cats.length - 6}
+                                                    </span>
+                                                </Link>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         );
                     })}
                 </div>
-
-                {/* No Results State */}
-                {searchQuery && filteredServices.length === 0 && (
-                    <div className="text-center py-12">
-                        <p className="text-gray-500">No services or categories match your search</p>
-                        <button
-                            onClick={() => setSearchQuery('')}
-                            className="mt-4 text-orange-500 hover:text-orange-400 text-sm font-medium"
-                        >
-                            Clear search
-                        </button>
-                    </div>
-                )}
 
                 {/* Premium View All Button */}
                 <div className="text-center mt-10">

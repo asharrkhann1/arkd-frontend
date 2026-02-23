@@ -4,24 +4,13 @@ export const serviceConfigs = {
     accounts: {
         id: 'accounts',
         title: 'Accounts',
-        name: 'Game Accounts',
+        name: 'Accounts',
         description: 'Get game accounts instantly',
         href: '/services/accounts',
         getHref: (cat) => cat ? `/services/accounts/${cat}` : '/services/accounts',
         icon: Users,
         color: 'from-orange-500 to-red-500',
         badge: 'Hot'
-    },
-    'game-accounts': {
-        id: 'game-accounts',
-        title: 'Game Accounts',
-        name: 'Game Accounts',
-        description: 'Premium game accounts for all platforms',
-        href: '/services/game-accounts',
-        getHref: (cat) => cat ? `/services/game-accounts/${cat}` : '/services/game-accounts',
-        icon: Gamepad2,
-        color: 'from-green-500 to-emerald-500',
-        badge: 'New'
     },
     currencies: {
         id: 'currencies',

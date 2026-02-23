@@ -1,10 +1,11 @@
 import React from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ShoppingCart, Star, ShieldCheck, Zap } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, Star, ShieldCheck, Zap, Search } from 'lucide-react';
 import { serviceConfigs } from '@/constants/servicesConfig';
 import { getBackgroundForOrigin } from '@/constants/backgroundMappings';
 import CategoryListing from '@/components/Services/CategoryListing';
 import { quickSearchKeywords } from '@/constants/quickSearch';
+import ServiceTypeSwitcher from '@/components/ServiceTypeSwitcher';
 
 async function getCategoryProducts(type, category, page = 1) {
     const normalizedType = type.toLowerCase();
@@ -92,6 +93,8 @@ export default async function CategoryProductsPage({ params, searchParams }) {
                             </div>
                         </div>
                     </div>
+                    {/* Service Type Switcher Bar */}
+                    <ServiceTypeSwitcher currentType={type} currentCategory={category} />
 
                     {/* Main Content Area with Filters */}
                     <CategoryListing

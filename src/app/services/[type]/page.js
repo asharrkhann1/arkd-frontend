@@ -1,3 +1,4 @@
+'use client';
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -6,25 +7,129 @@ import { serviceConfigs } from '@/constants/servicesConfig';
 import { getBackgroundForOrigin } from '@/constants/backgroundMappings';
 import { getServiceCardImage } from '@/constants/serviceCardImages';
 
-async function getServiceDetails(type) {
+const GAME_GRADIENTS = [
+    {
+        name: "Fortnite",
+        bgColor: "from-red-900/20 to-rose-900/20",
+        glowColor: "from-rose-500/40 via-red-500/30 to-rose-600/40",
+        width: "w-120",
+        height: "h-72"
+    },
+    {
+        name: "World of Warcraft",
+        bgColor: "from-slate-900/20 to-gray-800/20",
+        glowColor: "from-slate-600/40 via-gray-500/30 to-slate-700/40",
+        width: "w-120",
+        height: "h-80"
+    },
+    {
+        name: "League of Legends",
+        bgColor: "from-teal-900/20 to-cyan-900/20",
+        glowColor: "from-cyan-500/40 via-teal-400/30 to-cyan-600/40",
+        width: "w-120",
+        height: "h-62"
+    },
+    {
+        name: "Marvel Rivals",
+        bgColor: "from-yellow-900/20 to-orange-900/20",
+        glowColor: "from-orange-500/40 via-yellow-500/30 to-orange-600/40",
+        width: "w-120",
+        height: "h-80"
+    },
+    {
+        name: "Rainbow Six Siege",
+        bgColor: "from-gray-900/20 to-slate-800/20",
+        glowColor: "from-slate-500/40 via-gray-600/30 to-slate-600/40",
+        width: "w-120",
+        height: "h-80"
+    },
+    {
+        name: "Rocket League",
+        bgColor: "from-blue-900/20 to-indigo-900/20",
+        glowColor: "from-indigo-500/40 via-blue-500/30 to-indigo-600/40",
+        width: "w-120",
+        height: "h-80"
+    },
+    {
+        name: "FC 26",
+        bgColor: "from-green-900/20 to-emerald-900/20",
+        glowColor: "from-emerald-500/40 via-green-500/30 to-emerald-600/40",
+        width: "w-120",
+        height: "h-80"
+    },
+    {
+        name: "Valorant",
+        bgColor: "from-red-900/20 to-rose-900/20",
+        glowColor: "from-rose-500/40 via-red-500/30 to-rose-600/40",
+        width: "w-120",
+        height: "h-80"
+    },
+    {
+        name: "Clash Royale",
+        bgColor: "from-blue-900/20 to-purple-900/20",
+        glowColor: "from-blue-600/40 via-blue-500/30 to-purple-600/40",
+        width: "w-120",
+        height: "h-80"
+    }
+];
+
+function getServiceDetails(type) {
+    // Validate type parameter
+    if (!type || typeof type !== 'string') {
+        console.error('Invalid type parameter:', type);
+        return null;
+    }
+
     // Normalize type (e.g., top-ups -> topups)
     const normalizedType = type.replace('-', '');
-    const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/services/${normalizedType}`, {
+    return fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/services/${normalizedType}`, {
         cache: 'no-store'
-    });
-
-    if (!res.ok) return null;
-    return res.json();
+    }).then(res => res.ok ? res.json() : null);
 }
 
-export default async function ServiceTypePage({ params }) {
-    const { type } = await params;
-    const serviceData = await getServiceDetails(type);
+export default function ServiceTypePage({ params }) {
+    const { type } = React.use(params);
+    const [serviceData, setServiceData] = React.useState(null);
+    const [loading, setLoading] = React.useState(true);
+    const [hoveredCard, setHoveredCard] = React.useState(null);
+
+    React.useEffect(() => {
+        async function fetchData() {
+            if (!type) return;
+
+            setLoading(true);
+            const data = await getServiceDetails(type);
+            setServiceData(data);
+            setLoading(false);
+        }
+
+        fetchData();
+    }, [type]);
+
+    // Validate type parameter
+    if (!type || typeof type !== 'string') {
+        return (
+            <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4">
+                <h1 className="text-2xl font-bold text-white mb-4">Invalid Service Type</h1>
+                <Link href="/services" className="text-orange-500 hover:underline flex items-center gap-2">
+                    <ArrowLeft className="w-4 h-4" /> Back to Services
+                </Link>
+            </div>
+        );
+    }
 
     // Find config by matching href or normalized ID
     const config = Object.values(serviceConfigs).find(c =>
         c.href === `/services/${type}` || c.id === type.replace('-', '')
     );
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4">
+                <div className="text-white">Loading...</div>
+            </div>
+        );
+    }
 
     if (!serviceData || !serviceData.success) {
         return (
@@ -58,92 +163,107 @@ export default async function ServiceTypePage({ params }) {
                 </>
             )}
 
-            <div className="relative z-10 py-12 px-4 sm:px-6 lg:px-8">
-                <div className="max-w-7xl mx-auto">
-                    {/* Breadcrumbs / Back */}
-                    <div className="mb-8">
-                        <Link href="/services" className="text-gray-500 hover:text-white transition-colors flex items-center gap-2 text-sm font-medium">
-                            <ArrowLeft className="w-4 h-4" /> Back to Services
-                        </Link>
-                    </div>
+            {/* Hero Banner */}
+            <div className="relative z-10 mx-6 mt-8">
+                <div className="relative flex flex-col lg:flex-row items-center justify-between overflow-hidden border border-[#f5d38b]/20 rounded-[20px] bg-gradient-to-b from-gray-950/90 via-gray-900/90 to-gray-950/90 backdrop-blur-sm">
+                    {/* Left Section */}
+                    <div className="relative z-10 flex flex-col justify-center w-full lg:w-1/2 px-10 py-16 space-y-6">
+                        <div className="flex items-center gap-2 text-sm font-medium text-gray-500 uppercase tracking-[0.15em]">
+                            <Link href="/" className="hover:text-white transition-colors text-[10px]">Home</Link>
+                            <span>/</span>
+                            <Link href="/services" className="hover:text-white transition-colors text-[10px]">Services</Link>
+                            <span>/</span>
+                            <span className="text-[#f5d38b] text-[10px] uppercase">{config?.name || type}</span>
+                        </div>
 
-                    {/* Header */}
-                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
-                        <div className="flex items-center gap-6">
-                            <div className={`w-20 h-20 rounded-3xl bg-gradient-to-br ${config?.color || 'from-gray-700 to-gray-900'} p-0.5 shadow-2xl shadow-orange-500/10`}>
-                                <div className="w-full h-full bg-black rounded-[22px] flex items-center justify-center">
-                                    <Icon className="w-10 h-10 text-white" />
-                                </div>
+                        <h1 className="text-5xl md:text-6xl font-black bg-gradient-to-r from-[#f5d38b] via-[#e8c574] to-[#f5d38b] bg-clip-text text-transparent leading-tight">
+                            {config?.name || type}
+                        </h1>
+                        <p className="text-xl md:text-2xl font-medium text-white">
+                            {config?.description || 'Browse our premium selection of game services and digital items.'}
+                        </p>
+
+                        <div className="flex flex-wrap items-center gap-6">
+                            <div className="flex items-center gap-2 text-sm">
+                                <span>Rated</span>
+                                <span className="text-xl font-bold text-[#f5d38b]">4.9</span>
+                                <span className="text-xl text-yellow-400">★</span>
+                                <span>by over</span>
+                                <span className="font-semibold text-[#f5d38b]">10,000+</span>
+                                <span>customers</span>
                             </div>
-                            <div>
-                                <div className="flex items-center gap-3 mb-2">
-                                    <span className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] font-black uppercase tracking-widest text-gray-400">
-                                        Service Category
-                                    </span>
-                                    {config?.badge && (
-                                        <span className="px-3 py-1 bg-orange-500 rounded-full text-[10px] font-black uppercase tracking-widest text-white shadow-[0_0_15px_rgba(249,115,22,0.4)]">
-                                            {config.badge}
-                                        </span>
-                                    )}
-                                </div>
-                                <h1 className="text-5xl font-black italic tracking-tighter">{config?.name || type}</h1>
-                                <p className="text-gray-400 mt-2 max-w-xl text-lg font-medium leading-relaxed">
-                                    {config?.description || 'Browse our premium selection of game services and digital items.'}
-                                </p>
-                            </div>
+                            <Link href="#categories" className="bg-[#f5d38b] text-gray-950 font-semibold px-6 py-3 rounded-full hover:bg-[#e8c574] transition-all duration-300">
+                                Browse Now
+                            </Link>
                         </div>
                     </div>
 
-                    {/* Categories Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                        {categories.map((cat) => {
+                    {/* Right Side - Placeholder */}
+                    <div className="relative w-full lg:w-1/2 h-[400px] overflow-hidden">
+                        <div className="absolute inset-0 [clip-path:polygon(10%_0%,100%_0%,100%_100%,0%_100%)] overflow-hidden">
+                            <img
+                                src="https://placehold.co/800x400/1a1a2e/f5d38b?text=Coming+Soon"
+                                alt="Hero"
+                                className="object-cover w-full h-full"
+                            />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="categories" className="relative z-10 py-12 px-4 sm:px-6 lg:px-8">
+                <div className="max-w-8xl mx-auto">
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+                        {categories.map((cat, index) => {
                             const cardImage = getServiceCardImage(cat);
+                            const isHovered = hoveredCard === index;
+                            const isDimmed = hoveredCard !== null && hoveredCard !== index;
+
+                            // Get gradient theme for this category
+                            const game = GAME_GRADIENTS[index % GAME_GRADIENTS.length];
+
                             return (
-                                <Link
+                                <div
                                     key={cat}
-                                    href={`${config?.href || `/services/${type}`}/${cat}`}
-                                    className="group relative block aspect-[4/5] rounded-2xl overflow-hidden bg-[#0a0a0a] border border-white/5 shadow-xl transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-orange-500/10 hover:border-orange-500/20"
+                                    onMouseEnter={() => setHoveredCard(index)}
+                                    onMouseLeave={() => setHoveredCard(null)}
+                                    onClick={() => window.location.href = `${config?.href || `/services/${type}`}/${cat}`}
+                                    className={`group relative h-[350px] rounded-2xl overflow-hidden cursor-pointer transition-all duration-500 ${isDimmed ? "opacity-40 scale-95" : "opacity-100 scale-100"
+                                        }`}
                                 >
-                                    <div className="absolute inset-0 w-full h-full">
-                                        {cardImage ? (
-                                            <Image
-                                                src={cardImage}
-                                                alt={cat}
-                                                fill
-                                                className="object-cover object-center transition-transform duration-500 group-hover:scale-110"
-                                                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                                            />
-                                        ) : (
-                                            <div className="w-full h-full bg-gradient-to-br from-orange-600/20 via-purple-600/20 to-blue-600/20" />
-                                        )}
-                                    </div>
-
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90" />
-                                    <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 via-transparent to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-                                    <div className="absolute inset-0 p-5 flex flex-col justify-between z-10">
-                                        <div className="flex justify-between items-start">
-                                            <span className="px-3 py-1 bg-orange-500/90 backdrop-blur-sm text-white text-[10px] font-black uppercase tracking-wider rounded-full">
-                                                {cat.charAt(0).toUpperCase() + cat.slice(1, 4)}
-                                            </span>
+                                    <div
+                                        className={`absolute inset-0 bg-gradient-to-br transition-all duration-500 ${isHovered ? game.glowColor : game.bgColor
+                                            }`}
+                                    />
+                                    <div className="absolute inset-0 border border-white/10 rounded-2xl transition-all duration-500" />
+                                    <div className="relative h-full p-6 flex flex-col justify-between">
+                                        <div className="text-xs font-bold text-white/80 uppercase tracking-wider">
+                                            {cat.replace(/-/g, ' ')}
                                         </div>
-
-                                        <div className="space-y-3">
-                                            <h3 className="text-xl font-black text-white uppercase tracking-tight leading-tight drop-shadow-lg">
-                                                {cat.replace(/-/g, ' ')}
+                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                            <h3 className="text-6xl font-black text-white/5 uppercase tracking-tight text-center leading-none">
+                                                {cat.split('-')[0]}
                                             </h3>
-
-                                            <div className="flex items-center gap-2">
-                                                <div className="flex items-center gap-2 px-4 py-2.5 bg-white/10 backdrop-blur-md border border-white/20 rounded-full group-hover:bg-orange-500 group-hover:border-orange-500 transition-all duration-300">
-                                                    <span className="text-sm font-bold text-white">View</span>
-                                                    <ChevronRight className="w-4 h-4 text-white transition-transform duration-300 group-hover:translate-x-1" />
+                                        </div>
+                                        <img
+                                            src={cardImage || "/images/placeholder.png"}
+                                            alt={cat}
+                                            className={`absolute bottom-0 right-0 object-contain opacity-90 group-hover:opacity-100 transition-all duration-500 group-hover:scale-110 pointer-events-none ${game.width || "w-60"
+                                                } ${game.height || "h-80"}`}
+                                        />
+                                        <div className="flex justify-start">
+                                            <div className="relative overflow-hidden bg-gray-800/80 group-hover:bg-gray-800 rounded-full px-4 py-2.5 flex items-center gap-2 transition-all duration-500 group-hover:pr-5">
+                                                <span className="text-white text-sm font-semibold whitespace-nowrap opacity-0 max-w-0 group-hover:opacity-100 group-hover:max-w-[80px] transition-all duration-500 overflow-hidden">
+                                                    Buy Now
+                                                </span>
+                                                <div className="relative w-5 h-5 flex items-center justify-center">
+                                                    <ChevronRight className="w-5 h-5 text-white transition-transform duration-500 group-hover:translate-x-1" />
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
-
-                                    <div className="absolute -top-20 -right-20 w-40 h-40 bg-orange-500/20 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-                                </Link>
+                                </div>
                             );
                         })}
                     </div>

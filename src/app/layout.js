@@ -20,40 +20,58 @@ export const metadata = {
 async function getInitialData(cookieHeader) {
   const headers = cookieHeader ? { cookie: cookieHeader } : undefined;
 
-  // Fetch all services (general)
-  const serviceResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/services`, {
+  const servicesResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/services`, {
     cache: "no-store",
     headers,
     credentials: "include"
   });
-  const serviceData = await serviceResponse.json();
+  const servicesData = await servicesResponse.json();
 
-  // Fetch specific service types in parallel
-  const [giftcardsRes, accountsRes] = await Promise.all([
-    fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/services/giftcards`, {
-      cache: "no-store",
-      headers,
-      credentials: "include"
-    }).catch(() => null),
-    fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/services/accounts`, {
-      cache: "no-store",
-      headers,
-      credentials: "include"
-    }).catch(() => null)
-  ]);
+  const availableServices = servicesData?.services || [];
+  // console.log('Available services:', availableServices);
 
-  let giftcardsData = [];
-  let accountsData = [];
+  const categoryToServicesMap = {};
+  const serviceTypeData = {};
 
-  if (giftcardsRes && giftcardsRes.ok) {
-    const data = await giftcardsRes.json();
-    giftcardsData = data.services || data.items || data.data || [];
+  for (const serviceType of availableServices) {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/services/${serviceType}`, {
+        cache: "no-store",
+        headers,
+        credentials: "include"
+      });
+
+      if (response && response.ok) {
+        const data = await response.json();
+        const categories = data?.categories || [];
+
+        // console.log(`${serviceType} categories:`, categories);
+
+        serviceTypeData[serviceType] = data;
+
+        categories.forEach(category => {
+          if (!categoryToServicesMap[category]) {
+            categoryToServicesMap[category] = [];
+          }
+          categoryToServicesMap[category].push(serviceType);
+        });
+      }
+    } catch (error) {
+      console.error(`Failed to fetch ${serviceType}:`, error);
+    }
   }
 
-  if (accountsRes && accountsRes.ok) {
-    const data = await accountsRes.json();
-    accountsData = data.services || data.items || data.data || [];
-  }
+  // Create comprehensive services data object
+  const comprehensiveServicesData = {
+    services: availableServices,
+    categoryToServicesMap: categoryToServicesMap,
+    serviceTypeData: serviceTypeData
+  };
+
+  // console.log('Category to Services Map:', categoryToServicesMap);
+
+  const giftcardsData = serviceTypeData.giftcards?.services || serviceTypeData.giftcards?.items || serviceTypeData.giftcards?.data || [];
+  const accountsData = serviceTypeData.accounts?.services || serviceTypeData.accounts?.items || serviceTypeData.accounts?.data || [];
 
   const currencyRateResponse = await fetch(
     process.env.CURRENCY_RATE_API_URL,
@@ -97,14 +115,16 @@ async function getInitialData(cookieHeader) {
     }
   }
 
-  return { 
-    serviceData, 
-    currencyRateData, 
-    wishlistItems, 
+  return {
+    serviceData: servicesData,
+    currencyRateData,
+    wishlistItems,
     pendingOrders,
     orders,
     giftcardsData,
-    accountsData
+    accountsData,
+    categoryToServicesMap,
+    serviceTypeData
   };
 }
 
@@ -113,7 +133,7 @@ export default async function RootLayout({ children }) {
   const cookieStore = await cookies();
   const cookieHeader = cookieStore.getAll().map((c) => `${c.name}=${c.value}`).join('; ');
 
-  const { serviceData, currencyRateData, wishlistItems, pendingOrders, orders, giftcardsData, accountsData } = await getInitialData(cookieHeader);
+  const { serviceData, currencyRateData, wishlistItems, pendingOrders, orders, giftcardsData, accountsData, categoryToServicesMap, serviceTypeData } = await getInitialData(cookieHeader);
 
 
   let services = serviceData.services ? serviceData.services : [];
@@ -151,7 +171,9 @@ export default async function RootLayout({ children }) {
     orders,
     giftcards: giftcardsData,
     accounts: accountsData,
-    serviceCategories
+    serviceCategories,
+    categoryToServicesMap,
+    serviceTypeData
   }
 
   return (

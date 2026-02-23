@@ -101,10 +101,16 @@ export default function TicketChatPage() {
             ));
         };
 
+        let typingClearTimer = null;
         const handleTyping = (data) => {
             if (Number(data.ticket_id) !== ticketId) return;
-            if (isAdmin && data.role === 'user') setTyping(data.typing);
-            if (!isAdmin && data.role === 'admin') setTyping(data.typing);
+            const shouldHandle = (isAdmin && data.role === 'user') || (!isAdmin && data.role === 'admin');
+            if (!shouldHandle) return;
+            setTyping(data.typing);
+            clearTimeout(typingClearTimer);
+            if (data.typing) {
+                typingClearTimer = setTimeout(() => setTyping(false), 4000);
+            }
         };
 
         const handleTicketUpdated = (data) => {
@@ -118,6 +124,7 @@ export default function TicketChatPage() {
         socket.on('ticket:updated', handleTicketUpdated);
 
         return () => {
+            clearTimeout(typingClearTimer);
             socket.off('ticket:message:new', handleNewMessage);
             socket.off('ticket:message:seen:update', handleSeenUpdate);
             socket.off('ticket:typing', handleTyping);

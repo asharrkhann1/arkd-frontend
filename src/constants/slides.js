@@ -15,7 +15,7 @@ export const slides = [
     },
     {
         id: 2,
-        headline: 'LEVEL UP WITH IN-GAME CURRENCY',
+        headline: 'LEVEL UP WITH GAME CURRENCY',
         subtext: 'Buy game currency at the lowest prices and power up your progress!',
         ctaText: 'Buy Currency',
         ctaLink: '/services/currency',
