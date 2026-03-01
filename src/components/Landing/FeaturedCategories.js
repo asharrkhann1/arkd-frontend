@@ -3,7 +3,7 @@ import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Sparkles, Search, X } from 'lucide-react';
 import { useData } from '@/contexts/DataContext';
-import { serviceConfigs } from '@/constants/servicesConfig';
+import { serviceConfigs, getServiceConfig } from '@/constants/servicesConfig';
 import { getGameIcon, getGameColors } from '@/constants/gameIcons';
 import { getProductCategoryLogo, getAdditionalLogos } from '@/constants/productCategoryLogos';
 
@@ -14,7 +14,7 @@ const FeaturedCategories = () => {
     const activeServices = services
         ? services.map(s => {
             const type = typeof s === 'string' ? s : s.type;
-            return { type, config: serviceConfigs[type] };
+            return { type, config: getServiceConfig(type) };
         }).filter(item => item.config)
         : [];
 
@@ -148,7 +148,7 @@ const FeaturedCategories = () => {
                                                 {/* Available Services */}
                                                 <div className="flex items-center gap-2 flex-wrap">
                                                     {result.serviceTypes.map(serviceType => {
-                                                        const config = serviceConfigs[serviceType];
+                                                        const config = getServiceConfig(serviceType);
                                                         if (!config) return null;
                                                         const Icon = config.icon;
                                                         return (

@@ -3,9 +3,10 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ChevronRight, ArrowLeft } from 'lucide-react';
-import { serviceConfigs } from '@/constants/servicesConfig';
+import { getServiceConfig, normalizeServiceType } from '@/constants/servicesConfig';
 import { getBackgroundForOrigin } from '@/constants/backgroundMappings';
 import { getServiceCardImage } from '@/constants/serviceCardImages';
+import { getProductCategoryLogo } from '@/constants/productCategoryLogos';
 
 const GAME_GRADIENTS = [
     {
@@ -80,8 +81,7 @@ function getServiceDetails(type) {
         return null;
     }
 
-    // Normalize type (e.g., top-ups -> topups)
-    const normalizedType = type.replace('-', '');
+    const normalizedType = normalizeServiceType(type);
     return fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/services/${normalizedType}`, {
         cache: 'no-store'
     }).then(res => res.ok ? res.json() : null);
@@ -118,10 +118,7 @@ export default function ServiceTypePage({ params }) {
         );
     }
 
-    // Find config by matching href or normalized ID
-    const config = Object.values(serviceConfigs).find(c =>
-        c.href === `/services/${type}` || c.id === type.replace('-', '')
-    );
+    const config = getServiceConfig(type);
 
     if (loading) {
         return (
@@ -165,7 +162,7 @@ export default function ServiceTypePage({ params }) {
 
             {/* Hero Banner */}
             <div className="relative z-10 mx-6 mt-8">
-                <div className="relative flex flex-col lg:flex-row items-center justify-between overflow-hidden border border-[#f5d38b]/20 rounded-[20px] bg-gradient-to-b from-gray-950/90 via-gray-900/90 to-gray-950/90 backdrop-blur-sm">
+                <div className="relative flex flex-col lg:flex-row items-center justify-between overflow-hidden border border-orange-500/20 rounded-[20px] bg-gradient-to-b from-gray-950/90 via-gray-900/90 to-gray-950/90 backdrop-blur-sm">
                     {/* Left Section */}
                     <div className="relative z-10 flex flex-col justify-center w-full lg:w-1/2 px-10 py-16 space-y-6">
                         <div className="flex items-center gap-2 text-sm font-medium text-gray-500 uppercase tracking-[0.15em]">
@@ -173,10 +170,10 @@ export default function ServiceTypePage({ params }) {
                             <span>/</span>
                             <Link href="/services" className="hover:text-white transition-colors text-[10px]">Services</Link>
                             <span>/</span>
-                            <span className="text-[#f5d38b] text-[10px] uppercase">{config?.name || type}</span>
+                            <span className="text-orange-500 text-[10px] uppercase">{config?.name || type}</span>
                         </div>
 
-                        <h1 className="text-5xl md:text-6xl font-black bg-gradient-to-r from-[#f5d38b] via-[#e8c574] to-[#f5d38b] bg-clip-text text-transparent leading-tight">
+                        <h1 className="text-5xl md:text-6xl font-black text-white leading-tight">
                             {config?.name || type}
                         </h1>
                         <p className="text-xl md:text-2xl font-medium text-white">
@@ -186,13 +183,13 @@ export default function ServiceTypePage({ params }) {
                         <div className="flex flex-wrap items-center gap-6">
                             <div className="flex items-center gap-2 text-sm">
                                 <span>Rated</span>
-                                <span className="text-xl font-bold text-[#f5d38b]">4.9</span>
+                                <span className="text-xl font-bold text-orange-500">4.9</span>
                                 <span className="text-xl text-yellow-400">★</span>
                                 <span>by over</span>
-                                <span className="font-semibold text-[#f5d38b]">10,000+</span>
+                                <span className="font-semibold text-orange-500">10,000+</span>
                                 <span>customers</span>
                             </div>
-                            <Link href="#categories" className="bg-[#f5d38b] text-gray-950 font-semibold px-6 py-3 rounded-full hover:bg-[#e8c574] transition-all duration-300">
+                            <Link href="#categories" className="bg-orange-500 text-white font-semibold px-6 py-3 rounded-full hover:bg-orange-600 transition-all duration-300">
                                 Browse Now
                             </Link>
                         </div>
@@ -247,7 +244,7 @@ export default function ServiceTypePage({ params }) {
                                             </h3>
                                         </div>
                                         <img
-                                            src={cardImage || "/images/placeholder.png"}
+                                            src={cardImage || getProductCategoryLogo(cat)}
                                             alt={cat}
                                             className={`absolute bottom-0 right-0 object-contain opacity-90 group-hover:opacity-100 transition-all duration-500 group-hover:scale-110 pointer-events-none ${game.width || "w-60"
                                                 } ${game.height || "h-80"}`}

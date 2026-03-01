@@ -1,7 +1,7 @@
 'use client';
 import React, { useContext } from 'react';
 import { useRouter } from 'next/navigation';
-import { serviceConfigs } from '@/constants/servicesConfig';
+import { serviceConfigs, normalizeServiceType } from '@/constants/servicesConfig';
 import { useData } from '@/contexts/DataContext';
 
 const ServiceTypeSwitcher = ({ currentType, currentCategory }) => {
@@ -18,10 +18,12 @@ const ServiceTypeSwitcher = ({ currentType, currentCategory }) => {
             <div className="flex flex-wrap gap-2 justify-center items-center bg-white/[0.03] border border-white/[0.08] rounded-xl p-1 backdrop-blur-sm">
                 {Object.entries(serviceConfigs).map(([key, serviceConfig]) => {
                     const Icon = serviceConfig.icon;
-                    const isActive = serviceConfig.id === currentType.replace('-', '') || serviceConfig.href === `/services/${currentType}`;
+                    const normalizedCurrentType = normalizeServiceType(currentType);
+                    const isActive = serviceConfig.id === normalizedCurrentType || serviceConfig.href === `/services/${currentType}`;
 
-                    const isAvailable = availableServiceTypes.includes(serviceConfig.id) ||
-                        availableServiceTypes.includes(serviceConfig.id.replace('-', ''));
+                    const normalizedAvailableTypes = availableServiceTypes.map(normalizeServiceType);
+
+                    const isAvailable = normalizedAvailableTypes.includes(serviceConfig.id);
 
                     if (!isActive && !isAvailable) {
                         return null;

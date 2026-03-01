@@ -23,7 +23,7 @@ export default function Register() {
         setBusy(true);
         try {
             await signup({ username: name, email, password });
-            router.push('/profile');
+            router.push('/');
         } catch (err) {
             setError(err.message || 'Signup failed');
         } finally {

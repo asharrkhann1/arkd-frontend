@@ -34,7 +34,7 @@ export default function Login() {
             }
 
             const next = searchParams ? searchParams.get('next') : null;
-            router.push(next || '/profile');
+            router.push(next || '/');
         } catch (err) {
             // Keep 2FA input visible if backend returns requires2FA on error
             if (err.data && err.data.requires2FA) {

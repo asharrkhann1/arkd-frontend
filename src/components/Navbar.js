@@ -30,7 +30,7 @@ import {
     Flag
 } from 'lucide-react';
 import {
-    serviceConfigs
+    getServiceConfig
 } from '../constants/servicesConfig';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
@@ -147,7 +147,7 @@ const Navbar = ({ initialPendingOrders = [] }) => {
                                                 <div className="grid grid-cols-3 gap-6 p-6">
                                                     {services && services.map((service) => {
                                                         const type = typeof service === 'string' ? service : service.type;
-                                                        const config = serviceConfigs[type];
+                                                        const config = getServiceConfig(type);
                                                         if (!config) return null;
                                                         const Icon = config.icon;
                                                         return (
@@ -203,6 +203,7 @@ const Navbar = ({ initialPendingOrders = [] }) => {
                                     )}
                                 </AnimatePresence>
                             </div>
+
                         </nav>
                     </div>
 
@@ -516,7 +517,7 @@ const Navbar = ({ initialPendingOrders = [] }) => {
                                                 <div className="p-2 space-y-1">
                                                     {services && services.map((service) => {
                                                         const type = typeof service === 'string' ? service : service.type;
-                                                        const config = serviceConfigs[type];
+                                                        const config = getServiceConfig(type);
                                                         if (!config) return null;
                                                         return (
                                                             <Link

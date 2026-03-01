@@ -1,5 +1,23 @@
 import { Users, Coins, Package, Wallet, Gift, Zap, Gamepad2 } from 'lucide-react';
 
+export const SERVICE_TYPE_ALIASES = {
+    account: 'accounts',
+    accounts: 'accounts',
+    currency: 'currency',
+    currencies: 'currency',
+    item: 'items',
+    items: 'items',
+    topup: 'topups',
+    topups: 'topups',
+    giftcard: 'giftcards',
+    giftcards: 'giftcards',
+};
+
+export const normalizeServiceType = (type = '') => {
+    const key = String(type).toLowerCase().replace(/-/g, '');
+    return SERVICE_TYPE_ALIASES[key] || key;
+};
+
 export const serviceConfigs = {
     accounts: {
         id: 'accounts',
@@ -12,13 +30,13 @@ export const serviceConfigs = {
         color: 'from-orange-500 to-red-500',
         badge: 'Hot'
     },
-    currencies: {
-        id: 'currencies',
-        title: 'Currencies',
-        name: 'Currencies',
+    currency: {
+        id: 'currency',
+        title: 'Currency',
+        name: 'Currency',
         description: 'Cheapest game currency deals',
-        href: '/services/currencies',
-        getHref: (cat) => cat ? `/services/currencies/${cat}` : '/services/currencies',
+        href: '/services/currency',
+        getHref: (cat) => cat ? `/services/currency/${cat}` : '/services/currency',
         icon: Coins,
         color: 'from-yellow-500 to-orange-500'
     },
@@ -53,3 +71,5 @@ export const serviceConfigs = {
         color: 'from-blue-500 to-cyan-500'
     }
 };
+
+export const getServiceConfig = (type) => serviceConfigs[normalizeServiceType(type)] || null;
