@@ -2,7 +2,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
-import { getServiceConfig, normalizeServiceType } from '@/constants/servicesConfig';
+import { serviceConfigs } from '@/constants/servicesConfig';
 import { getProductCategoryLogo } from '@/constants/productCategoryLogos';
 import { useData } from '@/contexts/DataContext';
 
@@ -15,16 +15,15 @@ export default function ServicesPage() {
 
     // Build services with categories from existing data
     const servicesWithCategories = services.map(serviceType => {
-        const normalizedServiceType = normalizeServiceType(serviceType);
         const categories = Object.keys(categoryToServicesMap).filter(category => 
-            (categoryToServicesMap[category] || []).some(type => normalizeServiceType(type) === normalizedServiceType)
+            categoryToServicesMap[category].includes(serviceType)
         ).slice(0, 4); // Get first 4 categories
         
         console.log(`🔍 Debug - Categories for ${serviceType}:`, categories);
         
         return {
             type: serviceType,
-            config: getServiceConfig(serviceType),
+            config: serviceConfigs[serviceType],
             categories: categories
         };
     });

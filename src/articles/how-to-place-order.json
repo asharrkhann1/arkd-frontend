@@ -1,0 +1,40 @@
+{
+  "metadata": {
+    "name": "How to Place an Order",
+    "section": "guides"
+  },
+  "contents": [
+    {
+      "title": "How to Place an Order",
+      "content": "<div class='text-white-700'>Placing an order on our platform is designed to be simple, secure, and user-friendly. Whether you are a new user or returning customer, the ordering process only takes a few steps. This guide will walk you through the entire process, from creating your account to successfully placing your first order.</div>"
+    },
+    {
+      "title": "Create Your Account",
+      "content": "<div class='text-white-700'>The first step to placing an order is creating your personal account on our platform. Having an account allows you to manage orders, track progress, store wallet funds, and communicate with support if needed.</div><ol class='list-decimal ml-6 mt-3'><li>Go to the Sign Up or Register page on our website.</li><li>Enter the required information:<ul class='list-disc ml-6'><li>Username</li><li>Email address</li><li>Password</li></ul></li><li>Click the Create Account button.</li></ol>"
+    },
+    {
+      "title": "Verify Your Email Address",
+      "content": "<div class='text-white-700'>To keep our platform secure and ensure that all accounts belong to real users, email verification is required.</div><ol class='list-decimal ml-6 mt-3'><li>Open your email inbox.</li><li>Find the email sent by our platform.</li><li>Copy the verification code.</li><li>Return to the verification page.</li><li>Enter the code and click Verify.</li></ol>"
+    },
+    {
+      "title": "Add Funds to Your Wallet",
+      "content": "<div class='text-white-700'>Before placing an order, you must first add funds to your wallet balance.</div><ol class='list-decimal ml-6 mt-3'><li>Click your profile name at the top right.</li><li>Select Add Balance.</li><li>Click + Top Up Balance.</li><li>Enter the amount.</li><li>Select payment method.</li><li>Confirm payment.</li></ol>"
+    },
+    {
+      "title": "Browse Available Products",
+      "content": "<ul class='list-disc ml-6 text-white-700'><li>Browse different categories</li><li>Read service descriptions</li><li>Check pricing details</li><li>Read Terms and Conditions before placing the order</li></ul>"
+    },
+    {
+      "title": "Place Your Order",
+      "content": "<ol class='list-decimal ml-6 text-white-700'><li>Click the product or service you want.</li><li>Enter required details.</li><li>Confirm order details.</li><li>Click Place Order.</li></ol>"
+    },
+    {
+      "title": "Order Completion",
+      "content": "<div class='text-white-700'>Once your order is completed, you will be able to view the confirmation from your dashboard. You can also track previous orders in the Order History section.</div>"
+    },
+    {
+      "title": "Need Assistance",
+      "content": "<div class='text-white-700'>If you face issues while creating your account, verifying email, adding funds, or placing an order, you can contact support through the Help Center.</div>"
+    }
+  ]
+}

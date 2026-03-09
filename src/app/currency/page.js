@@ -17,7 +17,6 @@ import {
     AlertCircle,
     CheckCircle2,
     Package,
-    ArrowRight,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -41,7 +40,6 @@ export default function CurrencyPage() {
     const [quantity, setQuantity] = useState(0);
     const [termsAgreed, setTermsAgreed] = useState(false);
     const [ordering, setOrdering] = useState(false);
-    const [hoveredCard, setHoveredCard] = useState(null);
 
     const fetchProducts = useCallback(async () => {
         try {
@@ -229,81 +227,47 @@ export default function CurrencyPage() {
 
                 {/* Product Cards Grid */}
                 {!selectedProduct ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                         {productNames.map(name => {
                             const variants = categoryProducts.filter(p => p.name === name);
                             const first = variants[0];
                             const minPrice = Math.min(...variants.map(v => Number(v.unit_price)));
-                            const isHovered = hoveredCard === name;
-                            const isDimmed = hoveredCard !== null && hoveredCard !== name;
 
                             return (
-                                <div
+                                <motion.button
                                     key={name}
-                                    onMouseEnter={() => setHoveredCard(name)}
-                                    onMouseLeave={() => setHoveredCard(null)}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
                                     onClick={() => setSelectedProduct(first)}
-                                    className={`group relative h-[350px] rounded-2xl overflow-hidden cursor-pointer transition-all duration-500 ${
-                                        isDimmed ? "opacity-40 scale-95" : "opacity-100 scale-100"
-                                    }`}
+                                    className="group text-left bg-[#0a0a0a] border border-white/5 rounded-3xl p-6 hover:border-orange-500/30 transition-all"
                                 >
-                                    <div
-                                        className={`absolute inset-0 bg-gradient-to-br transition-all duration-500 ${
-                                            isHovered ? "from-orange-500/40 via-orange-400/30 to-orange-600/40" : "from-orange-900/20 to-orange-800/20"
-                                        }`}
-                                    />
-                                    <div className="absolute inset-0 border border-white/10 rounded-2xl transition-all duration-500" />
-                                    <div className="relative h-full p-6 flex flex-col justify-between">
-                                        {/* Top Section - Product Name */}
-                                        <div className="text-xs font-bold text-white/80 uppercase tracking-wider">
-                                            {name}
-                                        </div>
-                                        
-                                        {/* Center Section - Large Watermark */}
-                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                            <h3 className="text-6xl font-black text-white/5 uppercase tracking-tight text-center leading-none">
-                                                {name?.split(" ")[0]}
+                                    <div className="flex items-center gap-4 mb-4">
+                                        {first.thumbnail_image ? (
+                                            <img src={first.thumbnail_image} alt={name} className="w-12 h-12 rounded-xl object-cover" />
+                                        ) : (
+                                            <div className="w-12 h-12 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
+                                                <Coins className="w-6 h-6 text-orange-500" />
+                                            </div>
+                                        )}
+                                        <div>
+                                            <h3 className="font-black italic uppercase tracking-tight text-white group-hover:text-orange-500 transition-colors">
+                                                {name}
                                             </h3>
-                                        </div>
-                                        
-                                        {/* Product Icon */}
-                                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                                            {first.thumbnail_image ? (
-                                                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 p-0.5 shadow-2xl">
-                                                    <div className="w-full h-full bg-black/80 rounded-xl flex items-center justify-center">
-                                                        <img src={first.thumbnail_image} alt={name} className="w-10 h-10 object-contain" />
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 p-0.5 shadow-2xl">
-                                                    <div className="w-full h-full bg-black/80 rounded-xl flex items-center justify-center">
-                                                        <Coins className="w-10 h-10 text-white" />
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                        
-                                        {/* Bottom Section - Price and Button */}
-                                        <div className="flex justify-between items-end">
-                                            {/* Price Info */}
-                                            <div>
-                                                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-600">From</p>
-                                                <p className="text-lg font-black italic text-orange-500">${minPrice.toFixed(4)}</p>
-                                                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">{variants.length} variants</p>
-                                            </div>
-                                            
-                                            {/* Explore Button */}
-                                            <div className="relative overflow-hidden bg-gray-800/80 group-hover:bg-gray-800 rounded-full px-4 py-2.5 flex items-center gap-2 transition-all duration-500 group-hover:pr-5">
-                                                <span className="text-white text-sm font-semibold whitespace-nowrap opacity-0 max-w-0 group-hover:opacity-100 group-hover:max-w-[80px] transition-all duration-500 overflow-hidden">
-                                                    Explore
-                                                </span>
-                                                <div className="relative w-5 h-5 flex items-center justify-center">
-                                                    <ArrowRight className="w-5 h-5 text-white transition-transform duration-500 group-hover:translate-x-1" />
-                                                </div>
-                                            </div>
+                                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">{selectedCategory}</p>
                                         </div>
                                     </div>
-                                </div>
+
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-600">From</p>
+                                            <p className="text-xl font-black italic text-orange-500">${minPrice.toFixed(4)} <span className="text-sm text-gray-500">/ {first.unit}</span></p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-600">Variants</p>
+                                            <p className="text-sm font-black text-gray-400">{variants.length}</p>
+                                        </div>
+                                    </div>
+                                </motion.button>
                             );
                         })}
 

@@ -3,10 +3,9 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ChevronRight, ArrowLeft } from 'lucide-react';
-import { getServiceConfig, normalizeServiceType } from '@/constants/servicesConfig';
+import { serviceConfigs } from '@/constants/servicesConfig';
 import { getBackgroundForOrigin } from '@/constants/backgroundMappings';
 import { getServiceCardImage } from '@/constants/serviceCardImages';
-import { getProductCategoryLogo } from '@/constants/productCategoryLogos';
 
 const GAME_GRADIENTS = [
     {
@@ -81,7 +80,8 @@ function getServiceDetails(type) {
         return null;
     }
 
-    const normalizedType = normalizeServiceType(type);
+    // Normalize type (e.g., top-ups -> topups)
+    const normalizedType = type.replace('-', '');
     return fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/services/${normalizedType}`, {
         cache: 'no-store'
     }).then(res => res.ok ? res.json() : null);
@@ -118,7 +118,10 @@ export default function ServiceTypePage({ params }) {
         );
     }
 
-    const config = getServiceConfig(type);
+    // Find config by matching href or normalized ID
+    const config = Object.values(serviceConfigs).find(c =>
+        c.href === `/services/${type}` || c.id === type.replace('-', '')
+    );
 
     if (loading) {
         return (
@@ -244,7 +247,7 @@ export default function ServiceTypePage({ params }) {
                                             </h3>
                                         </div>
                                         <img
-                                            src={cardImage || getProductCategoryLogo(cat)}
+                                            src={cardImage || "/images/placeholder.png"}
                                             alt={cat}
                                             className={`absolute bottom-0 right-0 object-contain opacity-90 group-hover:opacity-100 transition-all duration-500 group-hover:scale-110 pointer-events-none ${game.width || "w-60"
                                                 } ${game.height || "h-80"}`}

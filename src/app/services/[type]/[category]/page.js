@@ -1,14 +1,14 @@
 import React from 'react';
 import Link from 'next/link';
 import { ArrowLeft, ShoppingCart, Star, ShieldCheck, Zap, Search } from 'lucide-react';
-import { getServiceConfig, normalizeServiceType } from '@/constants/servicesConfig';
+import { serviceConfigs } from '@/constants/servicesConfig';
 import { getBackgroundForOrigin } from '@/constants/backgroundMappings';
 import CategoryListing from '@/components/Services/CategoryListing';
 import { quickSearchKeywords } from '@/constants/quickSearch';
 import ServiceTypeSwitcher from '@/components/ServiceTypeSwitcher';
 
 async function getCategoryProducts(type, category, page = 1) {
-    const normalizedType = normalizeServiceType(type);
+    const normalizedType = type.toLowerCase();
     const normalizedCategory = category.toLowerCase();
     try {
         const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/${normalizedCategory}/${normalizedType}?page=${page}`, {
@@ -29,10 +29,12 @@ export default async function CategoryProductsPage({ params, searchParams }) {
     const currentPage = parseInt(page) || 1;
     const data = await getCategoryProducts(type, category, currentPage);
 
-    const normalizedType = normalizeServiceType(type);
+    const normalizedType = type.replace('-', '').toLowerCase();
     const keywords = quickSearchKeywords[normalizedType]?.[category.toLowerCase()] || [];
 
-    const config = getServiceConfig(type);
+    const config = Object.values(serviceConfigs).find(c =>
+        c.href === `/services/${type}` || c.id === normalizedType
+    );
 
     // Use fetched data (empty array if none)
     const items = data?.products || [];

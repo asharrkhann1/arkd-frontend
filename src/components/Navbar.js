@@ -30,7 +30,7 @@ import {
     Flag
 } from 'lucide-react';
 import {
-    getServiceConfig
+    serviceConfigs
 } from '../constants/servicesConfig';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
@@ -147,7 +147,7 @@ const Navbar = ({ initialPendingOrders = [] }) => {
                                                 <div className="grid grid-cols-3 gap-6 p-6">
                                                     {services && services.map((service) => {
                                                         const type = typeof service === 'string' ? service : service.type;
-                                                        const config = getServiceConfig(type);
+                                                        const config = serviceConfigs[type];
                                                         if (!config) return null;
                                                         const Icon = config.icon;
                                                         return (
@@ -204,6 +204,14 @@ const Navbar = ({ initialPendingOrders = [] }) => {
                                 </AnimatePresence>
                             </div>
 
+                            {/* Currency Link */}
+                            <Link
+                                href="/currency"
+                                className="flex items-center space-x-1.5 text-gray-300 hover:text-orange-500 transition-colors py-2"
+                            >
+                                <Coins className="w-4 h-4" />
+                                <span>Currency</span>
+                            </Link>
                         </nav>
                     </div>
 
@@ -517,7 +525,7 @@ const Navbar = ({ initialPendingOrders = [] }) => {
                                                 <div className="p-2 space-y-1">
                                                     {services && services.map((service) => {
                                                         const type = typeof service === 'string' ? service : service.type;
-                                                        const config = getServiceConfig(type);
+                                                        const config = serviceConfigs[type];
                                                         if (!config) return null;
                                                         return (
                                                             <Link
@@ -578,6 +586,18 @@ const Navbar = ({ initialPendingOrders = [] }) => {
                                         )}
                                     </AnimatePresence>
                                 </div>
+
+                                {/* Mobile Currency Page Link */}
+                                <Link
+                                    href="/currency"
+                                    className="flex items-center justify-between p-3 border border-gray-700 rounded-lg bg-gray-800/50 text-gray-200 hover:border-orange-500/50 hover:text-orange-500 transition-all"
+                                    onClick={() => setMobileMenuOpen(false)}
+                                >
+                                    <div className="flex items-center space-x-3">
+                                        <Coins className="w-5 h-5" />
+                                        <span className="font-medium">Currency</span>
+                                    </div>
+                                </Link>
 
                                 {/* Mobile Wishlist Link */}
                                 <Link

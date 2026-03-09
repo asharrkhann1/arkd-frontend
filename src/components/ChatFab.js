@@ -3,21 +3,52 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { MessageCircle, Paperclip, SendHorizonal, Volume2, VolumeX, X, ChevronDown, Filter, Package, Calendar } from 'lucide-react';
+import { MessageCircle, Paperclip, SendHorizonal, Volume2, VolumeX, X, ChevronDown, Filter, Package, Calendar, Home, HelpCircle, MessageSquare, BookOpen, ChevronRight } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSocket } from '@/contexts/SocketContext';
 import { useSocketChat } from '@/lib/useSocketChat';
 import { apiFetch } from '@/lib/api';
+import { articles, getArticlesBySection } from '@/constants/articles';
 
 export default function ChatFab() {
   const { user } = useAuth();
   const { emit: socketEmit, isConnected: socketConnected } = useSocket();
   const pathname = usePathname();
 
+  // Add keyframe animation for highlight effect
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes slideHighlight {
+        0% {
+          transform: translateX(-100%);
+          opacity: 0;
+        }
+        20% {
+          opacity: 1;
+        }
+        80% {
+          opacity: 1;
+        }
+        100% {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+    return () => document.head.removeChild(style);
+  }, []);
+
   const BEEP_KEY = 'chat_beep_muted_v1';
 
   const [chatOpen, setChatOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('home'); // 'home', 'help', 'messages'
+  const [selectedArticle, setSelectedArticle] = useState(null);
+  const [selectedTocIndex, setSelectedTocIndex] = useState(0);
+  const [highlightedSection, setHighlightedSection] = useState(null);
+  const articleContentRef = useRef(null);
   const [unseenCount, setUnseenCount] = useState(0);
   const [input, setInput] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -397,10 +428,10 @@ export default function ChatFab() {
 
   const displayMessages = useMemo(() => {
     if (filteredMessages !== null) return filteredMessages;
-    
+
     // Combine regular messages with system messages
     const allMessages = [...messages];
-    
+
     // Add system messages that aren't already in the messages array
     systemMessages.forEach(sysMsg => {
       const exists = messages.some(m => m.id === sysMsg.message_id);
@@ -418,10 +449,10 @@ export default function ChatFab() {
         });
       }
     });
-    
+
     // Sort by creation date
     allMessages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-    
+
     return allMessages;
   }, [filteredMessages, messages, systemMessages]);
 
@@ -554,30 +585,34 @@ export default function ChatFab() {
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(249,115,22,0.15),transparent_60%)]" />
             <div className="relative flex items-center justify-between">
               <div className="flex flex-col">
-                <div className="text-[14px] font-black uppercase tracking-[0.12em] text-orange-500/85">Chat with Admin</div>
-                <div className="text-[10px] text-gray-500 mt-1">Get support and assistance</div>
+                <div className="text-[14px] font-black uppercase tracking-[0.12em] text-orange-500/85">Support Center</div>
+                <div className="text-[10px] text-gray-500 mt-1">How can we help you today?</div>
               </div>
 
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowFilters(v => !v)}
-                  className={`h-9 w-9 rounded-[10px] border bg-white/[0.04] hover:border-orange-500/35 text-gray-300 hover:text-white transition-all flex items-center justify-center ${showFilters || filteredMessages ? 'border-orange-500/50 text-orange-400' : 'border-white/[0.08]'}`}
-                  aria-label="Filters"
-                  title="Filters & Orders"
-                >
-                  <Filter className="h-4 w-4" />
-                </button>
+                {activeTab === 'messages' && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setShowFilters(v => !v)}
+                      className={`h-9 w-9 rounded-[10px] border bg-white/[0.04] hover:border-orange-500/35 text-gray-300 hover:text-white transition-all flex items-center justify-center ${showFilters || filteredMessages ? 'border-orange-500/50 text-orange-400' : 'border-white/[0.08]'}`}
+                      aria-label="Filters"
+                      title="Filters & Orders"
+                    >
+                      <Filter className="h-4 w-4" />
+                    </button>
 
-                <button
-                  type="button"
-                  onClick={toggleBeepMuted}
-                  className="h-9 w-9 rounded-[10px] border border-white/[0.08] bg-white/[0.04] hover:border-orange-500/35 text-gray-300 hover:text-white transition-all flex items-center justify-center"
-                  aria-label={beepMuted ? 'Unmute notifications' : 'Mute notifications'}
-                  title={beepMuted ? 'Unmute notifications' : 'Mute notifications'}
-                >
-                  {beepMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-                </button>
+                    <button
+                      type="button"
+                      onClick={toggleBeepMuted}
+                      className="h-9 w-9 rounded-[10px] border border-white/[0.08] bg-white/[0.04] hover:border-orange-500/35 text-gray-300 hover:text-white transition-all flex items-center justify-center"
+                      aria-label={beepMuted ? 'Unmute notifications' : 'Mute notifications'}
+                      title={beepMuted ? 'Unmute notifications' : 'Mute notifications'}
+                    >
+                      {beepMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                    </button>
+                  </>
+                )}
 
                 <button
                   type="button"
@@ -591,307 +626,547 @@ export default function ChatFab() {
             </div>
           </div>
 
-          {/* Filters Panel */}
-          {showFilters && (
-            <div className="relative mt-3 space-y-2">
-              {/* Timestamp filters */}
-              <div className="flex gap-2 items-end">
-                <div className="flex-1">
-                  <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 block mb-1">From</label>
-                  <input
-                    type="date"
-                    value={filterFrom}
-                    onChange={(e) => setFilterFrom(e.target.value)}
-                    className="w-full h-8 px-2 rounded-lg bg-black/40 border border-white/[0.08] text-gray-200 text-[11px] outline-none focus:border-orange-500/40"
-                  />
-                </div>
-                <div className="flex-1">
-                  <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 block mb-1">To</label>
-                  <input
-                    type="date"
-                    value={filterTo}
-                    onChange={(e) => setFilterTo(e.target.value)}
-                    className="w-full h-8 px-2 rounded-lg bg-black/40 border border-white/[0.08] text-gray-200 text-[11px] outline-none focus:border-orange-500/40"
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={handleApplyFilters}
-                  disabled={jumpLoading}
-                  className="h-8 px-3 rounded-lg bg-orange-500/15 border border-orange-500/30 text-orange-400 text-[10px] font-bold uppercase hover:bg-orange-500/25 transition-all disabled:opacity-50"
-                >
-                  {jumpLoading ? '...' : 'Apply'}
-                </button>
-                {filteredMessages && (
-                  <button
-                    type="button"
-                    onClick={handleClearFilters}
-                    className="h-8 px-3 rounded-lg bg-white/[0.04] border border-white/[0.08] text-gray-400 text-[10px] font-bold uppercase hover:text-white transition-all"
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
+          {/* Navigation Tabs */}
+          <div className="flex border-b border-white/[0.08] bg-[#0b0b0b]">
+            {[
+              { id: 'home', label: 'Home', icon: Home },
+              { id: 'help', label: 'Help', icon: HelpCircle },
+              { id: 'messages', label: 'Messages', icon: MessageSquare },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  setSelectedArticle(null);
+                }}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-bold uppercase tracking-wider transition-all ${activeTab === tab.id
+                  ? 'text-orange-500 border-b-2 border-orange-500 bg-orange-500/5'
+                  : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.02]'
+                  }`}
+              >
+                <tab.icon className="w-4 h-4" />
+                <span>{tab.label}</span>
+              </button>
+            ))}
+          </div>
 
-              {/* Search */}
-              <div>
-                <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 block mb-1">Search Messages</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleSearch();
-                      }
-                    }}
-                    placeholder="Type to search..."
-                    className="flex-1 h-8 px-2 rounded-lg bg-black/40 border border-white/[0.08] text-gray-200 text-[11px] outline-none focus:border-orange-500/40 placeholder-gray-500"
-                  />
+          {/* Tab Content */}
+          {activeTab === 'home' && (
+            <div className="flex-1 overflow-y-auto bg-[#0b0b0b] px-4 py-6" style={{
+              scrollbarWidth: 'thin',
+              scrollbarColor: 'rgba(249, 115, 22, 0.4) transparent',
+            }}>
+              <div className="max-w-md mx-auto space-y-6">
+                {/* Greeting */}
+                <div className="text-center space-y-3">
+                  <div className="text-2xl font-black text-white">Hi there! 👋</div>
+                  <p className="text-gray-400 text-sm">How can we help you today?</p>
                   <button
-                    type="button"
-                    onClick={handleSearch}
-                    className="h-8 px-3 rounded-lg bg-orange-500/15 border border-orange-500/30 text-orange-400 text-[10px] font-bold uppercase hover:bg-orange-500/25 transition-all"
+                    onClick={() => setActiveTab('messages')}
+                    className="w-full py-3 px-4 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2"
                   >
-                    Search
+                    <MessageSquare className="w-4 h-4" />
+                    Send us a message
                   </button>
                 </div>
-                {searchResults.length > 0 && (
-                  <div className="flex items-center justify-between mt-2">
-                    <div className="text-[10px] text-gray-500 font-bold">
-                      {currentSearchIndex + 1} of {searchResults.length} results
-                    </div>
-                    <div className="flex gap-1">
-                      <button
-                        type="button"
-                        onClick={handleSearchPrev}
-                        className="h-6 px-2 rounded bg-white/[0.04] border border-white/[0.08] text-gray-400 text-[9px] font-bold hover:text-white transition-all"
-                      >
-                        ↑
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleSearchNext}
-                        className="h-6 px-2 rounded bg-white/[0.04] border border-white/[0.08] text-gray-400 text-[9px] font-bold hover:text-white transition-all"
-                      >
-                        ↓
-                      </button>
-                    </div>
-                  </div>
-                )}
+
+                {/* Quick Articles */}
+                <div className="space-y-3">
+                  <h3 className="text-xs font-black uppercase tracking-widest text-gray-500">Popular Articles</h3>
+                  {articles.map((article, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        setSelectedArticle(article);
+                        setActiveTab('help');
+                      }}
+                      className="w-full p-4 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.08] hover:border-orange-500/30 rounded-xl text-left transition-all group"
+                    >
+                      <div className="flex items-start gap-3">
+                        <BookOpen className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-bold text-white group-hover:text-orange-400 transition-colors">
+                            {article.metadata?.name || 'Article'}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1 capitalize">{article.metadata?.section || 'general'}</div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-orange-500 transition-colors flex-shrink-0" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
-
-              {/* System messages jump dropdown */}
-              {systemMessages.length > 0 && (
-                <div>
-                  <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 block mb-1">Jump to Message</label>
-                  <select
-                    value={selectedOrderJump}
-                    onChange={(e) => handleOrderJump(e.target.value)}
-                    className="w-full h-8 px-2 rounded-lg bg-black/40 border border-white/[0.08] text-gray-200 text-[11px] outline-none focus:border-orange-500/40 appearance-none cursor-pointer"
-                  >
-                    <option value="" className="bg-black">Select a message...</option>
-                    {systemMessages.map(m => {
-                      const icon = m.type === 'order' ? '🛒' : m.type === 'dispute' ? '⚠️' : m.type === 'ticket' ? '🎫' : '📢';
-                      return (
-                        <option key={m.message_id} value={m.message_id} className="bg-black">
-                          {icon} {m.title} — {m.subtitle} ({new Date(m.created_at).toLocaleDateString()})
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-              )}
-
-              {searchQuery.trim() && (
-                <div className="text-[10px] text-gray-500 font-bold">
-                  Search: {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} for "{searchQuery}" (jumping to {currentSearchIndex + 1})
-                </div>
-              )}
-              {filteredMessages && !searchQuery.trim() && (
-                <div className="text-[10px] text-gray-500 font-bold">
-                  Showing {filteredMessages.length} filtered message{filteredMessages.length !== 1 ? 's' : ''}
-                </div>
-              )}
             </div>
           )}
 
-          <div
-            className="flex-1 px-3 py-3 overflow-y-auto overflow-x-hidden bg-[#0b0b0b]"
-            onScroll={handleScroll}
-            style={{
+          {activeTab === 'help' && !selectedArticle && (
+            <div className="flex-1 overflow-y-auto bg-[#0b0b0b] px-4 py-6" style={{
               scrollbarWidth: 'thin',
               scrollbarColor: 'rgba(249, 115, 22, 0.4) transparent',
-            }}
-          >
-            {busy && messages.length === 0 && (
-              <div className="text-xs text-gray-400 px-1">Loading...</div>
-            )}
-            {error && (
-              <div className="text-xs text-red-400 px-1 mb-3">{error}</div>
-            )}
-
-            <div className="flex flex-col gap-3">
-              {displayMessages.map((m, idx) => {
-                const senderRole = getRole(m);
-                const myRole = role || (isAdmin ? 'admin' : 'user');
-                const mine = senderRole === myRole;
-                const text = getText(m);
-                const type = getMessageType(m);
-                const mediaUrl = getMedia(m);
-                const mediaKind = getMediaKind(m);
-                const internalPath = type === 'text' ? extractFirstInternalServiceUrl(text) : null;
-
-                if (senderRole === 'system') {
-                  return (
-                    <div key={m?.id ?? `m-${idx}`} data-message-id={m?.id} className="flex justify-center transition-all duration-300 rounded-2xl">
-                      <div className="max-w-[90%] px-4 py-2.5 text-[11px] leading-relaxed text-center rounded-2xl bg-white/[0.04] border border-white/[0.06] text-gray-400 whitespace-pre-wrap break-words [word-break:break-word]">
-                        {text || '...'}
-                        <div className="text-[9px] text-gray-600 mt-1">
-                          {m?.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }
-
-                return (
-                  <div key={m?.id ?? `m-${idx}`} data-message-id={m?.id} className={`flex min-w-0 transition-all duration-300 rounded-2xl ${mine ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[85%] min-w-0 ${mine ? 'items-end' : 'items-start'} flex flex-col gap-2`}>
-                      {type === 'media' && mediaUrl ? (
-                        <div
-                          className={`rounded-[18px] overflow-hidden border ${mine
-                            ? 'border-orange-500/35 bg-orange-500/15'
-                            : 'border-white/[0.08] bg-white/[0.03]'
-                            }`}
-                        >
-                          {mediaKind === 'video' ? (
-                            <video src={mediaUrl} controls className="max-w-[280px] w-full h-auto" />
-                          ) : (
-                            <img src={mediaUrl} alt="upload" className="max-w-[280px] w-full h-auto object-cover" />
-                          )}
-                        </div>
-                      ) : null}
-
-                      {type === 'text' && internalPath ? (
-                        <ProductCard
-                          mine={mine}
-                          servicePath={internalPath}
-                          fetcher={fetchProductCardData}
-                          fallbackText={text}
-                        />
-                      ) : null}
-
-                      {type === 'text' && !internalPath ? (
-                        <div
-                          className={`px-[12px] py-[10px] text-[13px] leading-relaxed rounded-[18px] border w-fit max-w-full min-w-0 whitespace-pre-wrap break-words [word-break:break-word] ${mine
-                            ? 'bg-orange-500/15 border-orange-500/35 text-white'
-                            : 'bg-white/[0.03] border-white/[0.08] text-gray-100'
-                            }`}
-                        >
-                          {text || '...'}
-                          <div className={`text-[10px] text-gray-500 mt-1 ${mine ? 'text-right' : 'text-left'}`}>
-                            {m?.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                            {mine && m?.id ? <span className="ml-2">{m?.is_seen ? 'Seen' : ''}</span> : null}
+            }}>
+              <div className="max-w-md mx-auto space-y-6">
+                <h2 className="text-xl font-black text-white">Help Center</h2>
+                {Object.entries(getArticlesBySection()).map(([section, sectionArticles]) => (
+                  <div key={section} className="space-y-3">
+                    <h3 className="text-xs font-black uppercase tracking-widest text-gray-500 capitalize">{section}</h3>
+                    {sectionArticles.map((article, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => {
+                          setSelectedArticle(article);
+                          setSelectedTocIndex(0);
+                        }}
+                        className="w-full p-4 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.08] hover:border-orange-500/30 rounded-xl text-left transition-all group"
+                      >
+                        <div className="flex items-start gap-3">
+                          <BookOpen className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-bold text-white group-hover:text-orange-400 transition-colors">
+                              {article.metadata?.name || 'Article'}
+                            </div>
                           </div>
+                          <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-orange-500 transition-colors flex-shrink-0" />
                         </div>
-                      ) : null}
-                    </div>
+                      </button>
+                    ))}
                   </div>
-                );
-              })}
-              <div ref={bottomRef} />
+                ))}
+              </div>
             </div>
+          )}
 
-            {/* Scroll to bottom button */}
-            {showScrollBtn && (
-              <button
-                onClick={scrollToBottom}
-                className="absolute bottom-24 left-1/2 -translate-x-1/2 h-8 px-3 rounded-full border border-white/[0.08] bg-white/[0.08] hover:bg-white/[0.12] text-white text-xs font-medium flex items-center gap-1 transition-all shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
-              >
-                <ChevronDown className="h-3 w-3" />
-                New messages
-              </button>
-            )}
+          {activeTab === 'help' && selectedArticle && (
+            <div className="flex-1 flex flex-col bg-[#0b0b0b] overflow-hidden">
+              {/* Article Header with TOC */}
+              <div className="px-4 py-4 border-b border-white/[0.08] space-y-3">
+                <button
+                  onClick={() => setSelectedArticle(null)}
+                  className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+                >
+                  <ChevronRight className="w-4 h-4 rotate-180" />
+                  Back to articles
+                </button>
+                <h2 className="text-lg font-black text-white">{selectedArticle.metadata?.name}</h2>
 
-            {/* Empty spacer at the end */}
-            <div className="h-4" />
-          </div>
-
-          <div className="px-3 pb-6 bg-[#0b0b0b] border-t border-white/[0.08] shrink-0">
-            <div className="flex items-end gap-2 pt-4">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*,video/*"
-                className="hidden"
-                onChange={(e) => handleUploadFile(e.target.files && e.target.files[0])}
-              />
-
-              <button
-                type="button"
-                onClick={() => fileInputRef.current && fileInputRef.current.click()}
-                disabled={!isAuthed || uploading}
-                className="h-10 w-10 rounded-[10px] border border-white/[0.08] bg-white/[0.04] hover:border-orange-500/35 text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-all shrink-0"
-                aria-label="Attach"
-              >
-                <Paperclip className="h-4 w-4" />
-              </button>
-
-              <div className="flex-1">
-                <input
-                  ref={textareaRef}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleSend();
-                    }
-                  }}
-                  placeholder={uploading ? 'Uploading...' : 'Type a message...'}
-                  disabled={uploading}
-                  type="text"
-                  className="w-full h-[40px] px-4 py-2 rounded-[12px] bg-black/25 border border-white/[0.08] text-gray-100 placeholder:text-gray-500 outline-none focus:border-orange-500/35"
-                />
+                {/* Table of Contents Dropdown */}
+                {selectedArticle.contents && selectedArticle.contents.length > 0 && (
+                  <div className="relative">
+                    <label className="text-[9px] font-black uppercase tracking-widest text-gray-500 block mb-1">Jump to section</label>
+                    <select
+                      value={selectedTocIndex}
+                      onChange={(e) => {
+                        const idx = Number(e.target.value);
+                        setSelectedTocIndex(idx);
+                        setHighlightedSection(idx);
+                        setTimeout(() => {
+                          const el = document.getElementById(`article-section-${idx}`);
+                          if (el) {
+                            // Scroll element into view with center alignment
+                            el.scrollIntoView({
+                              behavior: 'smooth',
+                              block: 'center',
+                              inline: 'nearest'
+                            });
+                          }
+                        }, 50);
+                        // Remove highlight after animation
+                        setTimeout(() => setHighlightedSection(null), 2000);
+                      }}
+                      className="w-full px-3 py-2 bg-white/[0.03] border border-white/[0.08] rounded-lg text-sm text-white outline-none focus:border-orange-500/50 appearance-none cursor-pointer"
+                    >
+                      {selectedArticle.contents.map((section, idx) => (
+                        <option key={idx} value={idx} className="bg-black">
+                          {section.title}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-[26px] w-4 h-4 text-gray-500 pointer-events-none" />
+                  </div>
+                )}
               </div>
 
-              <button
-                type="button"
-                onClick={handleSend}
-                disabled={!isAuthed || uploading}
-                className="h-10 w-10 rounded-[10px] border border-orange-500/35 bg-orange-500/15 hover:bg-orange-500/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-all shrink-0"
-                aria-label="Send"
-              >
-                <SendHorizonal className="h-4 w-4 text-orange-300" />
-              </button>
-            </div>
-          </div>
+              {/* Article Content */}
+              <div
+                ref={articleContentRef}
+                className="flex-1 overflow-y-auto px-4 py-6"
+                style={{
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: 'rgba(249, 115, 22, 0.4) transparent',
+                }}
+                onWheel={(e) => {
+                  // Prevent scroll from propagating to background
+                  const container = articleContentRef.current;
+                  if (container) {
+                    const { scrollTop, scrollHeight, clientHeight } = container;
+                    const isAtTop = scrollTop === 0;
+                    const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
 
-          <div className="h-[70px] px-3 pb-3 bg-[#0b0b0b] shrink-0 relative overflow-hidden">
-            <div className="absolute inset-0 opacity-20">
-              <div className="h-full w-full" style={{
-                backgroundImage: `radial-gradient(circle, rgba(255,255,255,0.3) 1px, transparent 1px)`,
-                backgroundSize: '12px 12px',
-                backgroundPosition: '0 0, 6px 6px'
-              }} />
+                    if ((isAtTop && e.deltaY < 0) || (isAtBottom && e.deltaY > 0)) {
+                      e.preventDefault();
+                    } else {
+                      e.stopPropagation();
+                    }
+                  }
+                }}
+              >
+                <div className="max-w-2xl mx-auto space-y-8">
+                  {selectedArticle.contents?.map((section, idx) => (
+                    <div key={idx} id={`article-section-${idx}`} className="scroll-mt-4">
+                      <h3 className={`text-base font-black text-white mb-3 relative overflow-hidden ${highlightedSection === idx ? 'animate-highlight' : ''
+                        }`}>
+                        {highlightedSection === idx && (
+                          <span
+                            className="absolute inset-0 bg-gradient-to-r from-transparent via-orange-500/30 to-transparent"
+                            style={{
+                              animation: 'slideHighlight 2s ease-out forwards'
+                            }}
+                          />
+                        )}
+                        <span className="relative z-10">{section.title}</span>
+                      </h3>
+                      <div
+                        className="prose prose-sm prose-invert max-w-none text-gray-300"
+                        dangerouslySetInnerHTML={{ __html: section.content }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
-            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+          )}
+
+          {activeTab === 'messages' && (
+            <>
+              {!isAuthed ? (
+                <div className="flex-1 flex items-center justify-center bg-[#0b0b0b] px-4 py-12">
+                  <div className="max-w-sm text-center space-y-4">
+                    <MessageSquare className="w-16 h-16 text-orange-500/50 mx-auto" />
+                    <h3 className="text-xl font-black text-white">Login Required</h3>
+                    <p className="text-gray-400 text-sm">Please log in to send messages and chat with our support team.</p>
+                    <Link
+                      href="/login"
+                      className="inline-block px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold text-sm transition-all"
+                    >
+                      Login to Continue
+                    </Link>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {showFilters && (
+                    <div className="relative mt-3 space-y-2">
+                      {/* Timestamp filters */}
+                      <div className="flex gap-2 items-end">
+                        <div className="flex-1">
+                          <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 block mb-1">From</label>
+                          <input
+                            type="date"
+                            value={filterFrom}
+                            onChange={(e) => setFilterFrom(e.target.value)}
+                            className="w-full h-8 px-2 rounded-lg bg-black/40 border border-white/[0.08] text-gray-200 text-[11px] outline-none focus:border-orange-500/40"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 block mb-1">To</label>
+                          <input
+                            type="date"
+                            value={filterTo}
+                            onChange={(e) => setFilterTo(e.target.value)}
+                            className="w-full h-8 px-2 rounded-lg bg-black/40 border border-white/[0.08] text-gray-200 text-[11px] outline-none focus:border-orange-500/40"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleApplyFilters}
+                          disabled={jumpLoading}
+                          className="h-8 px-3 rounded-lg bg-orange-500/15 border border-orange-500/30 text-orange-400 text-[10px] font-bold uppercase hover:bg-orange-500/25 transition-all disabled:opacity-50"
+                        >
+                          {jumpLoading ? '...' : 'Apply'}
+                        </button>
+                        {filteredMessages && (
+                          <button
+                            type="button"
+                            onClick={handleClearFilters}
+                            className="h-8 px-3 rounded-lg bg-white/[0.04] border border-white/[0.08] text-gray-400 text-[10px] font-bold uppercase hover:text-white transition-all"
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Search */}
+                      <div>
+                        <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 block mb-1">Search Messages</label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleSearch();
+                              }
+                            }}
+                            placeholder="Type to search..."
+                            className="flex-1 h-8 px-2 rounded-lg bg-black/40 border border-white/[0.08] text-gray-200 text-[11px] outline-none focus:border-orange-500/40 placeholder-gray-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleSearch}
+                            className="h-8 px-3 rounded-lg bg-orange-500/15 border border-orange-500/30 text-orange-400 text-[10px] font-bold uppercase hover:bg-orange-500/25 transition-all"
+                          >
+                            Search
+                          </button>
+                        </div>
+                        {searchResults.length > 0 && (
+                          <div className="flex items-center justify-between mt-2">
+                            <div className="text-[10px] text-gray-500 font-bold">
+                              {currentSearchIndex + 1} of {searchResults.length} results
+                            </div>
+                            <div className="flex gap-1">
+                              <button
+                                type="button"
+                                onClick={handleSearchPrev}
+                                className="h-6 px-2 rounded bg-white/[0.04] border border-white/[0.08] text-gray-400 text-[9px] font-bold hover:text-white transition-all"
+                              >
+                                ↑
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleSearchNext}
+                                className="h-6 px-2 rounded bg-white/[0.04] border border-white/[0.08] text-gray-400 text-[9px] font-bold hover:text-white transition-all"
+                              >
+                                ↓
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* System messages jump dropdown */}
+                      {systemMessages.length > 0 && (
+                        <div>
+                          <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 block mb-1">Jump to Message</label>
+                          <select
+                            value={selectedOrderJump}
+                            onChange={(e) => handleOrderJump(e.target.value)}
+                            className="w-full h-8 px-2 rounded-lg bg-black/40 border border-white/[0.08] text-gray-200 text-[11px] outline-none focus:border-orange-500/40 appearance-none cursor-pointer"
+                          >
+                            <option value="" className="bg-black">Select a message...</option>
+                            {systemMessages.map(m => {
+                              const icon = m.type === 'order' ? '🛒' : m.type === 'dispute' ? '⚠️' : m.type === 'ticket' ? '🎫' : '📢';
+                              return (
+                                <option key={m.message_id} value={m.message_id} className="bg-black">
+                                  {icon} {m.title} — {m.subtitle} ({new Date(m.created_at).toLocaleDateString()})
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </div>
+                      )}
+
+                      {searchQuery.trim() && (
+                        <div className="text-[10px] text-gray-500 font-bold">
+                          Search: {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} for "{searchQuery}" (jumping to {currentSearchIndex + 1})
+                        </div>
+                      )}
+                      {filteredMessages && !searchQuery.trim() && (
+                        <div className="text-[10px] text-gray-500 font-bold">
+                          Showing {filteredMessages.length} filtered message{filteredMessages.length !== 1 ? 's' : ''}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div
+                    className="flex-1 px-3 py-3 overflow-y-auto overflow-x-hidden bg-[#0b0b0b]"
+                    onScroll={handleScroll}
+                    style={{
+                      scrollbarWidth: 'thin',
+                      scrollbarColor: 'rgba(249, 115, 22, 0.4) transparent',
+                    }}
+                  >
+                    {busy && messages.length === 0 && (
+                      <div className="text-xs text-gray-400 px-1">Loading...</div>
+                    )}
+                    {error && (
+                      <div className="text-xs text-red-400 px-1 mb-3">{error}</div>
+                    )}
+
+                    <div className="flex flex-col gap-3">
+                      {displayMessages.map((m, idx) => {
+                        const senderRole = getRole(m);
+                        const myRole = role || (isAdmin ? 'admin' : 'user');
+                        const mine = senderRole === myRole;
+                        const text = getText(m);
+                        const type = getMessageType(m);
+                        const mediaUrl = getMedia(m);
+                        const mediaKind = getMediaKind(m);
+                        const internalPath = type === 'text' ? extractFirstInternalServiceUrl(text) : null;
+
+                        if (senderRole === 'system') {
+                          return (
+                            <div key={m?.id ?? `m-${idx}`} data-message-id={m?.id} className="flex justify-center transition-all duration-300 rounded-2xl">
+                              <div className="max-w-[90%] px-4 py-2.5 text-[11px] leading-relaxed text-center rounded-2xl bg-white/[0.04] border border-white/[0.06] text-gray-400 whitespace-pre-wrap break-words [word-break:break-word]">
+                                {text || '...'}
+                                <div className="text-[9px] text-gray-600 mt-1">
+                                  {m?.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div key={m?.id ?? `m-${idx}`} data-message-id={m?.id} className={`flex min-w-0 transition-all duration-300 rounded-2xl ${mine ? 'justify-end' : 'justify-start'}`}>
+                            <div className={`max-w-[85%] min-w-0 ${mine ? 'items-end' : 'items-start'} flex flex-col gap-2`}>
+                              {type === 'media' && mediaUrl ? (
+                                <div
+                                  className={`rounded-[18px] overflow-hidden border ${mine
+                                    ? 'border-orange-500/35 bg-orange-500/15'
+                                    : 'border-white/[0.08] bg-white/[0.03]'
+                                    }`}
+                                >
+                                  {mediaKind === 'video' ? (
+                                    <video src={mediaUrl} controls className="max-w-[280px] w-full h-auto" />
+                                  ) : (
+                                    <img src={mediaUrl} alt="upload" className="max-w-[280px] w-full h-auto object-cover" />
+                                  )}
+                                </div>
+                              ) : null}
+
+                              {type === 'text' && internalPath ? (
+                                <ProductCard
+                                  mine={mine}
+                                  servicePath={internalPath}
+                                  fetcher={fetchProductCardData}
+                                  fallbackText={text}
+                                />
+                              ) : null}
+
+                              {type === 'text' && !internalPath ? (
+                                <div
+                                  className={`px-[12px] py-[10px] text-[13px] leading-relaxed rounded-[18px] border w-fit max-w-full min-w-0 whitespace-pre-wrap break-words [word-break:break-word] ${mine
+                                    ? 'bg-orange-500/15 border-orange-500/35 text-white'
+                                    : 'bg-white/[0.03] border-white/[0.08] text-gray-100'
+                                    }`}
+                                >
+                                  {text || '...'}
+                                  <div className={`text-[10px] text-gray-500 mt-1 ${mine ? 'text-right' : 'text-left'}`}>
+                                    {m?.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                                    {mine && m?.id ? <span className="ml-2">{m?.is_seen ? 'Seen' : ''}</span> : null}
+                                  </div>
+                                </div>
+                              ) : null}
+                            </div>
+                          </div>
+                        );
+                      })}
+                      <div ref={bottomRef} />
+                    </div>
+
+                    {/* Scroll to bottom button */}
+                    {showScrollBtn && (
+                      <button
+                        onClick={scrollToBottom}
+                        className="absolute bottom-24 left-1/2 -translate-x-1/2 h-8 px-3 rounded-full border border-white/[0.08] bg-white/[0.08] hover:bg-white/[0.12] text-white text-xs font-medium flex items-center gap-1 transition-all shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
+                      >
+                        <ChevronDown className="h-3 w-3" />
+                        New messages
+                      </button>
+                    )}
+
+                    {/* Empty spacer at the end */}
+                    <div className="h-4" />
+                  </div>
+
+                  <div className="px-3 pb-6 bg-[#0b0b0b] border-t border-white/[0.08] shrink-0">
+                    <div className="flex items-end gap-2 pt-4">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*,video/*"
+                        className="hidden"
+                        onChange={(e) => handleUploadFile(e.target.files && e.target.files[0])}
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                        disabled={!isAuthed || uploading}
+                        className="h-10 w-10 rounded-[10px] border border-white/[0.08] bg-white/[0.04] hover:border-orange-500/35 text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-all shrink-0"
+                        aria-label="Attach"
+                      >
+                        <Paperclip className="h-4 w-4" />
+                      </button>
+
+                      <div className="flex-1">
+                        <input
+                          ref={textareaRef}
+                          value={input}
+                          onChange={(e) => setInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleSend();
+                            }
+                          }}
+                          placeholder={uploading ? 'Uploading...' : 'Type a message...'}
+                          disabled={uploading}
+                          type="text"
+                          className="w-full h-[40px] px-4 py-2 rounded-[12px] bg-black/25 border border-white/[0.08] text-gray-100 placeholder:text-gray-500 outline-none focus:border-orange-500/35"
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleSend}
+                        disabled={!isAuthed || uploading}
+                        className="h-10 w-10 rounded-[10px] border border-orange-500/35 bg-orange-500/15 hover:bg-orange-500/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-all shrink-0"
+                        aria-label="Send"
+                      >
+                        <SendHorizonal className="h-4 w-4 text-orange-300" />
+                      </button>
+                    </div>
+                  </div>
+
+                </>
+              )}
+            </>
+          )}
+
+          {/* Bottom Navigation Menu (Mobile Style) */}
+          <div className="shrink-0 border-t border-white/[0.08] bg-[#0b0b0b]">
+            <div className="flex items-center justify-around py-2">
+              {[
+                { id: 'home', label: 'Home', icon: Home },
+                { id: 'help', label: 'Help', icon: HelpCircle },
+                { id: 'messages', label: 'Messages', icon: MessageSquare },
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    setSelectedArticle(null);
+                  }}
+                  className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-all ${activeTab === tab.id
+                    ? 'text-orange-500 bg-orange-500/10'
+                    : 'text-gray-500 hover:text-gray-300'
+                    }`}
+                >
+                  <tab.icon className="w-5 h-5" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider">{tab.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
       <button
         type="button"
-        onClick={() => {
-          if (!isAuthed) {
-            toast.error('Please login first to start a chat');
-            return;
-          }
-          setChatOpen((v) => !v);
-        }}
+        onClick={() => setChatOpen((v) => !v)}
         className="fixed bottom-5 right-5 h-14 w-14 rounded-[14px] border border-white/[0.08] bg-white/[0.04] backdrop-blur-[14px] flex items-center justify-center hover:border-orange-500/35 hover:bg-orange-500/10 transition-all shadow-[0_20px_60px_rgba(0,0,0,0.6)] z-[1001]"
         aria-label="Open chat"
       >
