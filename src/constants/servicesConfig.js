@@ -51,5 +51,15 @@ export const serviceConfigs = {
         getHref: (cat) => cat ? `/services/giftcards/${cat}` : '/services/giftcards',
         icon: Gift,
         color: 'from-orange-600 to-orange-400'
+    },
+    currency: {
+        id: 'currency',
+        title: 'Currency',
+        name: 'Currency',
+        description: 'Buy game currency at best rates',
+        href: '/services/currency',
+        getHref: (cat) => cat ? `/services/currency/${cat}` : '/services/currency',
+        icon: Wallet,
+        color: 'from-orange-600 to-orange-400'
     }
 };

@@ -1164,20 +1164,22 @@ export default function ChatFab() {
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={() => setChatOpen((v) => !v)}
-        className="fixed bottom-5 right-5 h-14 w-14 rounded-[14px] border border-white/[0.08] bg-white/[0.04] backdrop-blur-[14px] flex items-center justify-center hover:border-orange-500/35 hover:bg-orange-500/10 transition-all shadow-[0_20px_60px_rgba(0,0,0,0.6)] z-[1001]"
-        aria-label="Open chat"
-      >
-        <MessageCircle className="h-6 w-6 text-orange-400" />
+      {!chatOpen && (
+        <button
+          type="button"
+          onClick={() => setChatOpen((v) => !v)}
+          className="fixed bottom-5 right-5 h-14 w-14 rounded-[14px] border border-white/[0.08] bg-white/[0.04] backdrop-blur-[14px] flex items-center justify-center hover:border-orange-500/35 hover:bg-orange-500/10 transition-all shadow-[0_20px_60px_rgba(0,0,0,0.6)] z-[1001]"
+          aria-label="Open chat"
+        >
+          <MessageCircle className="h-6 w-6 text-orange-400" />
 
-        {unseenCount > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-[6px] rounded-full bg-red-500 text-white text-[10px] font-black flex items-center justify-center shadow-[0_6px_20px_rgba(0,0,0,0.45)]">
-            {unseenCount >= 99 ? '99' : unseenCount}
-          </span>
-        )}
-      </button>
+          {unseenCount > 0 && (
+            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-[6px] rounded-full bg-red-500 text-white text-[10px] font-black flex items-center justify-center shadow-[0_6px_20px_rgba(0,0,0,0.45)]">
+              {unseenCount >= 99 ? '99' : unseenCount}
+            </span>
+          )}
+        </button>
+      )}
     </div>
   );
 }

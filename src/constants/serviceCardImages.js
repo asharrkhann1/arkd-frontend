@@ -17,6 +17,11 @@ export const serviceCardImages = {
     'wow': '/service-cards/wow1.png',
     'world-of-warcraft': '/service-cards/wow1.png',
     'worldofwarcraft': '/service-cards/wow1.png',
+    // Currency categories
+    'fifa': '/service-cards/fc-26.png',
+    'lol': '/service-cards/pngwing-1.png',
+    'league-of-legends': '/service-cards/pngwing-1.png',
+    'pubg': '/service-cards/pngwing-2.png',
     // Generic fallbacks
     'pngwing-1': '/service-cards/pngwing-1.png',
     'pngwing-2': '/service-cards/pngwing.com (2).png',

@@ -2,126 +2,70 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ChevronRight, ArrowLeft } from 'lucide-react';
+import { ChevronRight, ArrowLeft, Wallet } from 'lucide-react';
 import { serviceConfigs } from '@/constants/servicesConfig';
 import { getBackgroundForOrigin } from '@/constants/backgroundMappings';
 import { getServiceCardImage } from '@/constants/serviceCardImages';
 
 const GAME_GRADIENTS = [
     {
-        name: "Fortnite",
-        bgColor: "from-red-900/20 to-rose-900/20",
-        glowColor: "from-rose-500/40 via-red-500/30 to-rose-600/40",
-        width: "w-120",
-        height: "h-72"
-    },
-    {
-        name: "World of Warcraft",
-        bgColor: "from-slate-900/20 to-gray-800/20",
-        glowColor: "from-slate-600/40 via-gray-500/30 to-slate-700/40",
-        width: "w-120",
-        height: "h-80"
-    },
-    {
-        name: "League of Legends",
-        bgColor: "from-teal-900/20 to-cyan-900/20",
-        glowColor: "from-cyan-500/40 via-teal-400/30 to-cyan-600/40",
-        width: "w-120",
-        height: "h-62"
-    },
-    {
-        name: "Marvel Rivals",
-        bgColor: "from-yellow-900/20 to-orange-900/20",
-        glowColor: "from-orange-500/40 via-yellow-500/30 to-orange-600/40",
-        width: "w-120",
-        height: "h-80"
-    },
-    {
-        name: "Rainbow Six Siege",
-        bgColor: "from-gray-900/20 to-slate-800/20",
-        glowColor: "from-slate-500/40 via-gray-600/30 to-slate-600/40",
-        width: "w-120",
-        height: "h-80"
-    },
-    {
-        name: "Rocket League",
-        bgColor: "from-blue-900/20 to-indigo-900/20",
-        glowColor: "from-indigo-500/40 via-blue-500/30 to-indigo-600/40",
-        width: "w-120",
-        height: "h-80"
-    },
-    {
-        name: "FC 26",
+        name: "FIFA",
         bgColor: "from-green-900/20 to-emerald-900/20",
         glowColor: "from-emerald-500/40 via-green-500/30 to-emerald-600/40",
-        width: "w-120",
-        height: "h-80"
     },
     {
         name: "Valorant",
         bgColor: "from-red-900/20 to-rose-900/20",
         glowColor: "from-rose-500/40 via-red-500/30 to-rose-600/40",
-        width: "w-120",
-        height: "h-80"
     },
     {
-        name: "Clash Royale",
-        bgColor: "from-blue-900/20 to-purple-900/20",
-        glowColor: "from-blue-600/40 via-blue-500/30 to-purple-600/40",
-        width: "w-120",
-        height: "h-80"
+        name: "Fortnite",
+        bgColor: "from-blue-900/20 to-indigo-900/20",
+        glowColor: "from-indigo-500/40 via-blue-500/30 to-indigo-600/40",
+    },
+    {
+        name: "League of Legends",
+        bgColor: "from-teal-900/20 to-cyan-900/20",
+        glowColor: "from-cyan-500/40 via-teal-400/30 to-cyan-600/40",
+    },
+    {
+        name: "PUBG",
+        bgColor: "from-yellow-900/20 to-orange-900/20",
+        glowColor: "from-orange-500/40 via-yellow-500/30 to-orange-600/40",
     }
 ];
 
-function getServiceDetails(type) {
-    // Validate type parameter
-    if (!type || typeof type !== 'string') {
-        console.error('Invalid type parameter:', type);
+async function getCurrencyCategories() {
+    try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/currency/categories`, {
+            cache: 'no-store'
+        });
+        if (!res.ok) return null;
+        return await res.json();
+    } catch (err) {
+        console.error('Failed to fetch currency categories:', err);
         return null;
     }
-
-    // Normalize type (e.g., top-ups -> topups)
-    const normalizedType = type.replace('-', '');
-    return fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/services/${normalizedType}`, {
-        cache: 'no-store'
-    }).then(res => res.ok ? res.json() : null);
 }
 
-export default function ServiceTypePage({ params }) {
-    const { type } = React.use(params);
-    const [serviceData, setServiceData] = React.useState(null);
+export default function CurrencyPage() {
+    const [currencyData, setCurrencyData] = React.useState(null);
     const [loading, setLoading] = React.useState(true);
     const [hoveredCard, setHoveredCard] = React.useState(null);
 
     React.useEffect(() => {
         async function fetchData() {
-            if (!type) return;
-
             setLoading(true);
-            const data = await getServiceDetails(type);
-            setServiceData(data);
+            const data = await getCurrencyCategories();
+            setCurrencyData(data);
             setLoading(false);
         }
 
         fetchData();
-    }, [type]);
+    }, []);
 
-    // Validate type parameter
-    if (!type || typeof type !== 'string') {
-        return (
-            <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4">
-                <h1 className="text-2xl font-bold text-white mb-4">Invalid Service Type</h1>
-                <Link href="/services" className="text-orange-500 hover:underline flex items-center gap-2">
-                    <ArrowLeft className="w-4 h-4" /> Back to Services
-                </Link>
-            </div>
-        );
-    }
-
-    // Find config by matching href or normalized ID
-    const config = Object.values(serviceConfigs).find(c =>
-        c.href === `/services/${type}` || c.id === type.replace('-', '')
-    );
+    const config = serviceConfigs.currency;
+    const Icon = config?.icon || Wallet;
 
     if (loading) {
         return (
@@ -131,10 +75,10 @@ export default function ServiceTypePage({ params }) {
         );
     }
 
-    if (!serviceData || !serviceData.success) {
+    if (!currencyData || !currencyData.success || !currencyData.categories) {
         return (
             <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4">
-                <h1 className="text-2xl font-bold text-white mb-4">Service Not Found</h1>
+                <h1 className="text-2xl font-bold text-white mb-4">Currency Service Not Available</h1>
                 <Link href="/" className="text-orange-500 hover:underline flex items-center gap-2">
                     <ArrowLeft className="w-4 h-4" /> Back to Home
                 </Link>
@@ -142,11 +86,10 @@ export default function ServiceTypePage({ params }) {
         );
     }
 
-    const { categories } = serviceData;
-    const Icon = config?.icon || ChevronRight;
+    const categories = currencyData.categories || [];
 
-    // Get background for the first category (or try to match origin)
-    const halfPageBg = categories.length > 0
+    // Get background for the first category
+    const halfPageBg = categories && categories.length > 0
         ? getBackgroundForOrigin(categories[0])
         : null;
 
@@ -173,14 +116,14 @@ export default function ServiceTypePage({ params }) {
                             <span>/</span>
                             <Link href="/services" className="hover:text-white transition-colors text-[10px]">Services</Link>
                             <span>/</span>
-                            <span className="text-orange-500 text-[10px] uppercase">{config?.name || type}</span>
+                            <span className="text-orange-500 text-[10px] uppercase">{config?.name || 'Currency'}</span>
                         </div>
 
                         <h1 className="text-5xl md:text-6xl font-black text-white leading-tight">
-                            {config?.name || type}
+                            {config?.name || 'Currency'}
                         </h1>
                         <p className="text-xl md:text-2xl font-medium text-white">
-                            {config?.description || 'Browse our premium selection of game services and digital items.'}
+                            {config?.description || 'Buy game currency at the best rates available.'}
                         </p>
 
                         <div className="flex flex-wrap items-center gap-6">
@@ -228,7 +171,7 @@ export default function ServiceTypePage({ params }) {
                                     key={cat}
                                     onMouseEnter={() => setHoveredCard(index)}
                                     onMouseLeave={() => setHoveredCard(null)}
-                                    onClick={() => window.location.href = `${config?.href || `/services/${type}`}/${cat}`}
+                                    onClick={() => window.location.href = `/services/currency/${cat}`}
                                     className={`group relative h-[350px] rounded-2xl overflow-hidden cursor-pointer transition-all duration-500 ${isDimmed ? "opacity-40 scale-95" : "opacity-100 scale-100"
                                         }`}
                                 >
@@ -269,7 +212,7 @@ export default function ServiceTypePage({ params }) {
 
                     {categories.length === 0 && (
                         <div className="text-center py-32 bg-[#0a0a0a] rounded-3xl border border-dashed border-white/10">
-                            <p className="text-gray-500 font-medium">No categories available for this service yet.</p>
+                            <p className="text-gray-500 font-medium">No currency categories available yet.</p>
                         </div>
                     )}
                 </div>
