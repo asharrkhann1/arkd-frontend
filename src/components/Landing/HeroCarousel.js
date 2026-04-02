@@ -21,7 +21,7 @@ const HeroCarousel = () => {
 
         const interval = setInterval(() => {
             setCurrentSlide((prev) => (prev + 1) % slides.length);
-        }, 4500);
+        }, 6000);
 
         return () => clearInterval(interval);
     }, [isAutoPlaying, slides.length]);

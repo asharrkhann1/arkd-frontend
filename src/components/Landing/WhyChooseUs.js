@@ -37,14 +37,7 @@ const features = [
         desc: 'Fully encrypted payment gateways with real-time fraud monitoring on every transaction.',
         color: 'from-purple-500 to-violet-600',
         textColor: 'text-purple-400',
-    },
-    {
-        icon: Users,
-        title: 'Happy Gamers',
-        desc: 'Trusted by customers worldwide since launch.',
-        color: 'from-pink-500 to-rose-600',
-        textColor: 'text-pink-400',
-    },
+    }
 ];
 
 const WhyChooseUs = () => {
@@ -70,22 +63,24 @@ const WhyChooseUs = () => {
                 </div>
 
                 {/* Premium Glassmorphism Cards */}
-                <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5 place-items-center">
                     {features.map((f, idx) => {
                         const Icon = f.icon;
                         return (
                             <div
                                 key={idx}
-                                className="rounded-2xl bg-gradient-to-b from-white/[0.08] to-white/[0.02] backdrop-blur-sm border border-white/[0.12] p-6 hover:border-orange-500/30 hover:shadow-[0_0_30px_rgba(249,115,22,0.15)] transition-all duration-500 group"
+                                className="rounded-2xl bg-gradient-to-b from-white/[0.08] to-white/[0.02] backdrop-blur-sm border border-white/[0.12] p-6 hover:border-orange-500/30 hover:shadow-[0_0_30px_rgba(249,115,22,0.15)] transition-all duration-500 group w-full h-64 flex flex-col justify-center"
                             >
                                 {/* Premium Icon with gradient border */}
-                                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${f.color} p-[1px] mb-5 group-hover:scale-110 transition-transform duration-500`}>
+                                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${f.color} p-[1px] mb-4 group-hover:scale-110 transition-transform duration-500 mx-auto`}>
                                     <div className="w-full h-full rounded-xl bg-[#141419] flex items-center justify-center">
                                         <Icon className={`w-5 h-5 ${f.textColor}`} />
                                     </div>
                                 </div>
-                                <h3 className="text-lg font-black text-white mb-2">{f.title}</h3>
-                                <p className="text-sm text-gray-400 leading-relaxed">{f.desc}</p>
+                                <div className="flex-1 flex flex-col justify-center">
+                                    <h3 className="text-lg font-black text-white mb-2 text-center">{f.title}</h3>
+                                    <p className="text-sm text-gray-400 leading-relaxed text-center">{f.desc}</p>
+                                </div>
                             </div>
                         );
                     })}

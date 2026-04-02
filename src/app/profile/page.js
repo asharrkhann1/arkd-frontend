@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     User,
     Loader2,
@@ -17,6 +18,9 @@ import {
     Crown,
     LogOut,
     Sparkles,
+    AlertTriangle,
+    Check,
+    X,
 } from 'lucide-react';
 
 const quickActions = [
@@ -36,9 +40,15 @@ const colorMap = {
 };
 
 export default function ProfilePage() {
-    const { user, loading, logout } = useAuth();
+    const { user, loading, logout, requestAccountVerify, confirmAccountVerify } = useAuth();
     const { formatPrice } = useCurrency();
     const router = useRouter();
+
+    // Verification state
+    const [verifyOtp, setVerifyOtp] = useState('');
+    const [verifyStep, setVerifyStep] = useState(1); // 1 = request, 2 = verify
+    const [verifyLoading, setVerifyLoading] = useState(false);
+    const [verifyMsg, setVerifyMsg] = useState({ type: '', text: '' });
 
     useEffect(() => {
         if (!loading && !user) {
@@ -68,11 +78,43 @@ export default function ProfilePage() {
 
     const handleQuickAction = (item) => {
         if (item.action === 'chat') {
-            // Dispatch a custom event that ChatFab can listen to
-            window.dispatchEvent(new CustomEvent('open-chat'));
+            window.openChat?.();
             return;
         }
         if (item.href) router.push(item.href);
+    };
+
+    const handleRequestVerifyOtp = async () => {
+        setVerifyMsg({ type: '', text: '' });
+        setVerifyLoading(true);
+        try {
+            await requestAccountVerify();
+            setVerifyMsg({ type: 'success', text: 'Verification code sent to your email' });
+            setVerifyStep(2);
+        } catch (err) {
+            setVerifyMsg({ type: 'error', text: err.message });
+        } finally {
+            setVerifyLoading(false);
+        }
+    };
+
+    const handleConfirmVerify = async () => {
+        setVerifyMsg({ type: '', text: '' });
+        if (!verifyOtp.trim()) {
+            setVerifyMsg({ type: 'error', text: 'Enter the verification code' });
+            return;
+        }
+        setVerifyLoading(true);
+        try {
+            await confirmAccountVerify({ otp: verifyOtp.trim() });
+            setVerifyMsg({ type: 'success', text: 'Account verified successfully!' });
+            setVerifyOtp('');
+            setVerifyStep(1);
+        } catch (err) {
+            setVerifyMsg({ type: 'error', text: err.message });
+        } finally {
+            setVerifyLoading(false);
+        }
     };
 
     return (
@@ -82,6 +124,79 @@ export default function ProfilePage() {
             <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-purple-500/5 rounded-full blur-[100px] pointer-events-none" />
 
             <div className="max-w-3xl mx-auto space-y-6 relative z-10">
+
+                {/* ─── Verification Banner ─────────────────────────────── */}
+                {!user.is_verified && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="rounded-2xl border border-yellow-500/30 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 backdrop-blur-xl p-5 sm:p-6 shadow-[0_0_40px_rgba(0,0,0,0.3)]"
+                    >
+                        <div className="flex items-start gap-3">
+                            <AlertTriangle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                                <h3 className="text-sm font-black text-yellow-400 uppercase tracking-wider">Account Not Verified</h3>
+                                <p className="text-xs text-gray-400 mt-1">Verify your account to access all features. We'll send a verification code to your email.</p>
+                                
+                                <div className="mt-4 space-y-3">
+                                    <AnimatePresence>
+                                        {verifyMsg.text && (
+                                            <motion.div
+                                                initial={{ opacity: 0, y: -10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, y: -10 }}
+                                                className={`flex items-center gap-2 p-3 rounded-xl text-xs font-bold ${
+                                                    verifyMsg.type === 'success'
+                                                        ? 'bg-green-500/10 border border-green-500/20 text-green-400'
+                                                        : 'bg-red-500/10 border border-red-500/20 text-red-400'
+                                                }`}
+                                            >
+                                                {verifyMsg.type === 'success' ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
+                                                {verifyMsg.text}
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+
+                                    {verifyStep === 1 ? (
+                                        <button
+                                            onClick={handleRequestVerifyOtp}
+                                            disabled={verifyLoading}
+                                            className="px-5 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:shadow-[0_0_20px_rgba(249,115,22,0.3)]"
+                                        >
+                                            {verifyLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                                            Send Verification Code
+                                        </button>
+                                    ) : (
+                                        <div className="flex items-center gap-3 flex-wrap">
+                                            <input
+                                                type="text"
+                                                value={verifyOtp}
+                                                onChange={(e) => setVerifyOtp(e.target.value)}
+                                                placeholder="Enter 6-digit code"
+                                                maxLength={6}
+                                                className="bg-black/50 border border-white/10 rounded-xl py-3 px-4 text-sm text-white placeholder-gray-600 outline-none focus:border-orange-500/50 transition-all w-48"
+                                            />
+                                            <button
+                                                onClick={handleConfirmVerify}
+                                                disabled={verifyLoading}
+                                                className="px-5 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:shadow-[0_0_20px_rgba(249,115,22,0.3)]"
+                                            >
+                                                {verifyLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                                                Verify
+                                            </button>
+                                            <button
+                                                onClick={() => { setVerifyStep(1); setVerifyMsg({ type: '', text: '' }); }}
+                                                className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                                            >
+                                                Resend
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
 
                 {/* ─── Profile Header Card ─────────────────────────────── */}
                 <div className="relative rounded-2xl border border-white/[0.08] bg-gradient-to-b from-white/[0.08] to-white/[0.02] backdrop-blur-xl p-6 sm:p-8 shadow-[0_0_40px_rgba(0,0,0,0.3)]">

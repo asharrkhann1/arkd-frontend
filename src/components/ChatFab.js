@@ -44,6 +44,17 @@ export default function ChatFab() {
   const BEEP_KEY = 'chat_beep_muted_v1';
 
   const [chatOpen, setChatOpen] = useState(false);
+
+  // Expose openChat function globally for "Start Live Chat" buttons
+  useEffect(() => {
+    window.openChat = () => {
+      setChatOpen(true);
+      setActiveTab('messages');
+    };
+    return () => {
+      delete window.openChat;
+    };
+  }, []);
   const [activeTab, setActiveTab] = useState('home'); // 'home', 'help', 'messages'
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [selectedTocIndex, setSelectedTocIndex] = useState(0);

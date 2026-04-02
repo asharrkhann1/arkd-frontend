@@ -1,10 +1,11 @@
 'use client'
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { apiFetch } from '@/lib/api';
 
 export default function Register() {
     const router = useRouter();
@@ -16,6 +17,48 @@ export default function Register() {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [busy, setBusy] = useState(false);
+
+    // Username availability
+    const [usernameStatus, setUsernameStatus] = useState(null); // null | 'checking' | 'available' | 'taken' | 'invalid'
+    const [usernameMsg, setUsernameMsg] = useState('');
+    const debounceRef = useRef(null);
+
+    useEffect(() => {
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+
+        const trimmed = name.trim();
+        if (!trimmed) {
+            setUsernameStatus(null);
+            setUsernameMsg('');
+            return;
+        }
+        if (trimmed.length < 3) {
+            setUsernameStatus('invalid');
+            setUsernameMsg('Minimum 3 characters');
+            return;
+        }
+
+        setUsernameStatus('checking');
+        setUsernameMsg('');
+
+        debounceRef.current = setTimeout(async () => {
+            try {
+                const data = await apiFetch(`/settings/username/check?username=${encodeURIComponent(trimmed)}`);
+                if (data.available) {
+                    setUsernameStatus('available');
+                    setUsernameMsg('Username available');
+                } else {
+                    setUsernameStatus('taken');
+                    setUsernameMsg('Username already taken');
+                }
+            } catch {
+                setUsernameStatus('taken');
+                setUsernameMsg('Username already taken');
+            }
+        }, 500);
+
+        return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+    }, [name]);
 
     async function onSubmit(e) {
         e.preventDefault();
@@ -110,15 +153,33 @@ export default function Register() {
 
                     {/* Form */}
                     <form onSubmit={onSubmit} className="flex flex-col gap-4">
-                        <input
-                            type="text"
-                            placeholder="Username"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            disabled={busy}
-                            required
-                            className="w-full p-4 bg-black/60 border border-orange-500/30 rounded-xl text-[15px] text-slate-100 placeholder-slate-500 focus:outline-none focus:bg-black/80 focus:border-orange-500/60 focus:ring-[3px] focus:ring-orange-500/15 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                        />
+                        <div className="relative">
+                            <input
+                                type="text"
+                                placeholder="Username"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                disabled={busy}
+                                required
+                                className={`w-full p-4 pr-12 bg-black/60 border rounded-xl text-[15px] text-slate-100 placeholder-slate-500 focus:outline-none focus:bg-black/80 focus:ring-[3px] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${
+                                    usernameStatus === 'available' ? 'border-green-500/50 focus:border-green-500/60 focus:ring-green-500/15' :
+                                    usernameStatus === 'taken' || usernameStatus === 'invalid' ? 'border-red-500/50 focus:border-red-500/60 focus:ring-red-500/15' :
+                                    'border-orange-500/30 focus:border-orange-500/60 focus:ring-orange-500/15'
+                                }`}
+                            />
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                                {usernameStatus === 'checking' && <Loader2 className="w-5 h-5 text-orange-400 animate-spin" />}
+                                {usernameStatus === 'available' && <CheckCircle2 className="w-5 h-5 text-green-400" />}
+                                {(usernameStatus === 'taken' || usernameStatus === 'invalid') && <XCircle className="w-5 h-5 text-red-400" />}
+                            </div>
+                        </div>
+                        {usernameMsg && (
+                            <p className={`text-xs mt-1 font-medium ${
+                                usernameStatus === 'available' ? 'text-green-400' : 'text-red-400'
+                            }`}>
+                                {usernameMsg}
+                            </p>
+                        )}
                         <input
                             type="email"
                             placeholder="Email Address"
