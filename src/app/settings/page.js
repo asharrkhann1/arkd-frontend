@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { apiFetch } from '@/lib/api';
 import {
     Loader2,
     User,
@@ -20,7 +19,6 @@ import {
     AlertTriangle,
     Copy,
     CheckCircle2,
-    XCircle,
 } from 'lucide-react';
 
 // ─── Reusable Components ────────────────────────────────────────────────────
@@ -77,11 +75,10 @@ function StatusMessage({ type, message }) {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className={`flex items-center gap-2 p-3 rounded-xl text-xs font-bold ${
-                type === 'success'
+            className={`flex items-center gap-2 p-3 rounded-xl text-xs font-bold ${type === 'success'
                     ? 'bg-green-500/10 border border-green-500/20 text-green-400'
                     : 'bg-red-500/10 border border-red-500/20 text-red-400'
-            }`}
+                }`}
         >
             {type === 'success' ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
             {message}
@@ -128,9 +125,6 @@ export default function SettingsPage() {
     const [usernamePassword, setUsernamePassword] = useState('');
     const [usernameLoading, setUsernameLoading] = useState(false);
     const [usernameMsg, setUsernameMsg] = useState({ type: '', text: '' });
-    const [usernameAvail, setUsernameAvail] = useState(null); // null | 'checking' | 'available' | 'taken' | 'invalid'
-    const [usernameAvailMsg, setUsernameAvailMsg] = useState('');
-    const usernameDebounceRef = useRef(null);
 
     // Email
     const [newEmail, setNewEmail] = useState('');
@@ -166,44 +160,6 @@ export default function SettingsPage() {
     useEffect(() => {
         if (!authLoading && !user) router.push('/');
     }, [authLoading, user, router]);
-
-    // Real-time username availability check
-    useEffect(() => {
-        if (usernameDebounceRef.current) clearTimeout(usernameDebounceRef.current);
-
-        const trimmed = newUsername.trim();
-        if (!trimmed) {
-            setUsernameAvail(null);
-            setUsernameAvailMsg('');
-            return;
-        }
-        if (trimmed.length < 3) {
-            setUsernameAvail('invalid');
-            setUsernameAvailMsg('Minimum 3 characters');
-            return;
-        }
-
-        setUsernameAvail('checking');
-        setUsernameAvailMsg('');
-
-        usernameDebounceRef.current = setTimeout(async () => {
-            try {
-                const data = await apiFetch(`/settings/username/check?username=${encodeURIComponent(trimmed)}`);
-                if (data.available) {
-                    setUsernameAvail('available');
-                    setUsernameAvailMsg('Username available');
-                } else {
-                    setUsernameAvail('taken');
-                    setUsernameAvailMsg('Username already taken');
-                }
-            } catch {
-                setUsernameAvail('taken');
-                setUsernameAvailMsg('Username already taken');
-            }
-        }, 500);
-
-        return () => { if (usernameDebounceRef.current) clearTimeout(usernameDebounceRef.current); };
-    }, [newUsername]);
 
     if (authLoading) {
         return (
@@ -465,32 +421,12 @@ export default function SettingsPage() {
                                 <span className="text-[10px] font-bold uppercase tracking-widest text-gray-600">Current:</span>
                                 <span className="text-sm font-bold text-white">{user.username}</span>
                             </div>
-                            <div className="space-y-1.5">
-                                <label className="text-[10px] font-bold uppercase tracking-widest text-gray-500">New Username</label>
-                                <div className="relative">
-                                    <input
-                                        type="text"
-                                        value={newUsername}
-                                        onChange={(e) => setNewUsername(e.target.value)}
-                                        placeholder="Enter new username"
-                                        className={`w-full bg-black/50 border rounded-xl py-3 px-4 pr-10 text-sm text-white placeholder-gray-600 outline-none transition-all ${
-                                            usernameAvail === 'available' ? 'border-green-500/50 focus:border-green-500/60' :
-                                            usernameAvail === 'taken' || usernameAvail === 'invalid' ? 'border-red-500/50 focus:border-red-500/60' :
-                                            'border-white/10 focus:border-orange-500/50'
-                                        }`}
-                                    />
-                                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                                        {usernameAvail === 'checking' && <Loader2 className="w-4 h-4 text-orange-400 animate-spin" />}
-                                        {usernameAvail === 'available' && <CheckCircle2 className="w-4 h-4 text-green-400" />}
-                                        {(usernameAvail === 'taken' || usernameAvail === 'invalid') && <XCircle className="w-4 h-4 text-red-400" />}
-                                    </div>
-                                </div>
-                                {usernameAvailMsg && (
-                                    <p className={`text-[10px] font-bold ${usernameAvail === 'available' ? 'text-green-400' : 'text-red-400'}`}>
-                                        {usernameAvailMsg}
-                                    </p>
-                                )}
-                            </div>
+                            <InputField
+                                label="New Username"
+                                value={newUsername}
+                                onChange={(e) => setNewUsername(e.target.value)}
+                                placeholder="Enter new username"
+                            />
                             <InputField
                                 label="Current Password"
                                 type="password"
@@ -501,7 +437,7 @@ export default function SettingsPage() {
                             <AnimatePresence>
                                 <StatusMessage type={usernameMsg.type} message={usernameMsg.text} />
                             </AnimatePresence>
-                            <ActionButton onClick={handleChangeUsername} loading={usernameLoading} disabled={usernameAvail === 'taken' || usernameAvail === 'checking' || usernameAvail === 'invalid'}>
+                            <ActionButton onClick={handleChangeUsername} loading={usernameLoading}>
                                 Update Username
                             </ActionButton>
                         </div>
@@ -609,11 +545,10 @@ export default function SettingsPage() {
                     >
                         <div className="space-y-4">
                             {/* Status indicator */}
-                            <div className={`flex items-center gap-3 p-3 rounded-xl border ${
-                                user.two_fa_enabled
+                            <div className={`flex items-center gap-3 p-3 rounded-xl border ${user.two_fa_enabled
                                     ? 'bg-green-500/5 border-green-500/20'
                                     : 'bg-yellow-500/5 border-yellow-500/20'
-                            }`}>
+                                }`}>
                                 {user.two_fa_enabled ? (
                                     <>
                                         <ShieldCheck className="w-5 h-5 text-green-500" />
