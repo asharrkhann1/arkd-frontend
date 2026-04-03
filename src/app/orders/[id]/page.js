@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { Loader2, Package, CheckCircle2, AlertCircle, Terminal, Copy, ArrowLeft, Download, ShieldCheck, Clock, XCircle, Ban, Flag, MessageCircle } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
 import toast from 'react-hot-toast';
+import { getProductCategoryLogo } from '@/constants/productCategoryLogos';
 
 function parseDeliveryTimeMs(deliveryTime) {
     if (!deliveryTime) return 0;
@@ -281,8 +282,16 @@ export default function OrderDetailPage() {
                     animate={{ opacity: 1, y: 0 }}
                     className="bg-[#0a0a0a] border border-white/5 rounded-[3rem] p-8 md:p-12 mb-8 relative overflow-hidden"
                 >
-                    <div className="absolute top-0 right-0 p-8 opacity-10">
-                        <Package className="w-40 h-40 text-orange-500" />
+                    <div className="absolute top-0 right-0 p-8 opacity-[0.07]">
+                        {order.product_snapshot?.product_category ? (
+                            <img
+                                src={getProductCategoryLogo(order.product_snapshot.product_category)}
+                                alt=""
+                                className="w-40 h-40 object-contain"
+                            />
+                        ) : (
+                            <Package className="w-40 h-40 text-orange-500" />
+                        )}
                     </div>
 
                     <div className="relative z-10">
@@ -335,15 +344,29 @@ export default function OrderDetailPage() {
                                         Request Cancellation
                                     </button>
                                 )}
-                                {countdown !== null && (
-                                    <div className="px-5 py-3 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center gap-3">
-                                        <Clock className="w-4 h-4 text-orange-500 animate-pulse" />
-                                        <div>
-                                            <p className="text-[9px] font-black uppercase tracking-widest text-orange-500/70 mb-0.5">Dispute available in</p>
-                                            <p className="text-sm font-black text-orange-400 tracking-wider font-mono">{formatCountdown(countdown)}</p>
+                                {countdown !== null && (() => {
+                                    const deliveryTimeMs = parseDeliveryTimeMs(order.product_snapshot?.delivery_time);
+                                    const elapsed = deliveryTimeMs - countdown;
+                                    const progress = deliveryTimeMs > 0 ? Math.min(100, Math.max(0, (elapsed / deliveryTimeMs) * 100)) : 0;
+                                    return (
+                                        <div className="px-5 py-3 rounded-xl bg-orange-500/10 border border-orange-500/20 space-y-2 w-full md:w-auto md:min-w-[260px]">
+                                            <div className="flex items-center gap-3">
+                                                <Clock className="w-4 h-4 text-orange-500 animate-pulse" />
+                                                <div className="flex-1">
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-orange-500/70 mb-0.5">Dispute available in</p>
+                                                    <p className="text-sm font-black text-orange-400 tracking-wider font-mono">{formatCountdown(countdown)}</p>
+                                                </div>
+                                            </div>
+                                            <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                                <div
+                                                    className="h-full bg-gradient-to-r from-orange-500 to-orange-400 rounded-full transition-all duration-1000 ease-linear"
+                                                    style={{ width: `${progress}%` }}
+                                                />
+                                            </div>
+                                            <p className="text-[8px] font-bold text-gray-600 text-right">{Math.round(progress)}% elapsed</p>
                                         </div>
-                                    </div>
-                                )}
+                                    );
+                                })()}
                                 {disputeEligibility?.eligible && countdown === null && (
                                     <button
                                         onClick={() => setShowDisputeModal(true)}
@@ -433,16 +456,39 @@ export default function OrderDetailPage() {
                             </div>
                         </div>
 
-                        <div className="bg-black border border-white/10 rounded-2xl p-6 font-mono text-sm relative group">
-                            <button
-                                onClick={() => copyToClipboard(typeof deliverables === 'string' ? deliverables : JSON.stringify(deliverables, null, 2))}
-                                className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-lg text-gray-400 hover:text-white transition-colors"
-                            >
-                                <Copy className="w-4 h-4" />
-                            </button>
-                            <pre className="text-green-400 overflow-x-auto whitespace-pre-wrap break-all">
-                                {typeof deliverables === 'string' ? deliverables : JSON.stringify(deliverables, null, 2)}
-                            </pre>
+                        <div className="space-y-3">
+                            {(() => {
+                                let items = [];
+                                if (typeof deliverables === 'string') {
+                                    try {
+                                        const parsed = JSON.parse(deliverables);
+                                        if (Array.isArray(parsed)) items = parsed;
+                                        else items = [deliverables];
+                                    } catch {
+                                        items = [deliverables];
+                                    }
+                                } else if (Array.isArray(deliverables)) {
+                                    items = deliverables;
+                                } else {
+                                    items = [JSON.stringify(deliverables, null, 2)];
+                                }
+
+                                return items.map((item, idx) => {
+                                    const text = typeof item === 'string' ? item : JSON.stringify(item, null, 2);
+                                    return (
+                                        <div key={idx} className="bg-black border border-white/10 rounded-2xl p-5 flex items-center justify-between gap-4 group hover:border-orange-500/30 transition-all">
+                                            <p className="font-mono text-sm text-orange-400 break-all whitespace-pre-wrap flex-1">{text}</p>
+                                            <button
+                                                onClick={() => copyToClipboard(text)}
+                                                className="p-2.5 bg-white/5 hover:bg-orange-500/20 border border-white/10 hover:border-orange-500/30 rounded-xl text-gray-400 hover:text-orange-400 transition-all flex-shrink-0"
+                                                title="Copy"
+                                            >
+                                                <Copy className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    );
+                                });
+                            })()}
                         </div>
 
                         <div className="mt-6 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-gray-500">

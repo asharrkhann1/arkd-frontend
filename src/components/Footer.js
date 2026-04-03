@@ -16,21 +16,27 @@ const Footer = () => {
                     {/* Brand Column */}
                     <div className="p-6 rounded-2xl bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-sm border border-white/[0.08] space-y-6">
                         <Link href="/" className="flex items-center space-x-2 group">
-                            <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(249,115,22,0.4)] group-hover:shadow-[0_0_20px_rgba(249,115,22,0.6)] transition-shadow">
-                                <span className="text-white font-bold text-sm">Ark</span>
-                            </div>
+                            <img 
+                                src="/logo.png" 
+                                alt="ARKD" 
+                                className="w-10 h-10 object-contain group-hover:scale-105 transition-transform duration-300"
+                            />
                             <span className="text-xl font-black text-white uppercase tracking-tight">ARKD</span>
                         </Link>
                         <p className="text-gray-400 text-sm leading-relaxed">
                             The world's most secure marketplace for gamers. Buy, sell, and trade virtual assets with confidence and instant delivery.
                         </p>
                         <div className="flex space-x-3">
-                            {[Facebook, Twitter, Instagram, Youtube].map((Icon, i) => (
-                                <a key={i} href="#" className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-gray-400 hover:bg-orange-500/10 hover:border-orange-500/30 hover:text-orange-400 transition-all duration-300">
-                                    <Icon className="w-5 h-5" />
-                                </a>
-                            ))}
-                            <a href="#" className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-gray-400 hover:bg-orange-500/10 hover:border-orange-500/30 hover:text-orange-400 transition-all duration-300">
+                            <a href="https://www.instagram.com/arkd.shop" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-gray-400 hover:bg-orange-500/10 hover:border-orange-500/30 hover:text-orange-400 transition-all duration-300">
+                                <Instagram className="w-5 h-5" />
+                            </a>
+                            <a href="https://x.com/ARKDshop" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-gray-400 hover:bg-orange-500/10 hover:border-orange-500/30 hover:text-orange-400 transition-all duration-300">
+                                <Twitter className="w-5 h-5" />
+                            </a>
+                            <a href="https://www.youtube.com/channel/UCfzOPG1mg2RXl-G3JIkGe5w" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-gray-400 hover:bg-orange-500/10 hover:border-orange-500/30 hover:text-orange-400 transition-all duration-300">
+                                <Youtube className="w-5 h-5" />
+                            </a>
+                            <a href="https://www.tiktok.com/@arkdshop?lang=en-GB" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-gray-400 hover:bg-orange-500/10 hover:border-orange-500/30 hover:text-orange-400 transition-all duration-300">
                                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.17-1.02-1.28-.67-2.35-1.76-2.91-3.1-.02 1.89.01 3.78.01 5.67 0 1.59-.41 3.21-1.27 4.53-1.16 1.77-3.13 2.99-5.24 3.01-1.36.02-2.73-.39-3.84-1.2-1.11-.81-1.96-2.01-2.34-3.32-.22-.71-.3-1.46-.26-2.21.05-1.31.54-2.59 1.37-3.59 1.23-1.49 3.13-2.37 5.05-2.32.02 1.48-.04 2.96-.04 4.44-.98-.32-2.15-.23-3.02.43-.86.66-1.42 1.77-1.38 2.87.04 1.1.71 2.15 1.7 2.65.99.5 2.21.41 3.12-.27.91-.68 1.51-1.79 1.56-2.91.05-1.58.01-3.16.01-4.74-.01-3.92.01-7.84.01-11.76z" />
                                 </svg>

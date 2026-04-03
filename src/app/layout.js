@@ -15,6 +15,11 @@ import { cookies } from "next/headers";
 export const metadata = {
   title: "ARKD - Premium Game Market",
   description: "The best place to buy game accounts, items, and currencies.",
+  icons: {
+    icon: '/logo.png',
+    shortcut: '/logo.png',
+    apple: '/logo.png',
+  },
 };
 
 async function getInitialData(cookieHeader) {

@@ -102,9 +102,11 @@ const Navbar = ({ initialPendingOrders = [] }) => {
                     {/* Logo and Main Navigation */}
                     <div className="flex items-center space-x-6">
                         <Link href="/" className="flex items-center space-x-2 group">
-                            <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(249,115,22,0.4)] group-hover:shadow-[0_0_20px_rgba(249,115,22,0.6)] transition-shadow">
-                                <span className="text-white font-bold text-sm">Ark</span>
-                            </div>
+                            <img
+                                src="/logo.png"
+                                alt="ARKD"
+                                className="w-10 h-10 object-contain group-hover:scale-105 transition-transform duration-300"
+                            />
                             <span className="text-xl font-black text-white uppercase tracking-tight">
                                 ARKD
                             </span>
@@ -204,14 +206,6 @@ const Navbar = ({ initialPendingOrders = [] }) => {
                                 </AnimatePresence>
                             </div>
 
-                            {/* Currency Link */}
-                            <Link
-                                href="/currency"
-                                className="flex items-center space-x-1.5 text-gray-300 hover:text-orange-500 transition-colors py-2"
-                            >
-                                <Coins className="w-4 h-4" />
-                                <span>Currency</span>
-                            </Link>
                         </nav>
                     </div>
 

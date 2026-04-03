@@ -20,7 +20,8 @@ import {
     X,
     Minus,
     Plus,
-    Trophy
+    Trophy,
+    ScrollText
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
@@ -312,6 +313,7 @@ function OrderConfirmationModal({ isOpen, onClose, product, user, formatPrice, r
     const [quantity, setQuantity] = useState(initialQuantity);
     const [termsAccepted, setTermsAccepted] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [showTOS, setShowTOS] = useState(false);
 
     const maxQuantity = product.stock_mode === 'limited'
         ? (product.quantity_available || 1)
@@ -565,22 +567,38 @@ function OrderConfirmationModal({ isOpen, onClose, product, user, formatPrice, r
                                     )}
                                 </div>
 
-                                <label className="flex gap-4 cursor-pointer group">
-                                    <div className="relative flex items-start pt-1">
-                                        <input
-                                            type="checkbox"
-                                            className="peer sr-only"
-                                            checked={termsAccepted}
-                                            onChange={(e) => setTermsAccepted(e.target.checked)}
-                                            disabled={isProcessing}
-                                        />
-                                        <div className="w-5 h-5 border border-white/20 rounded-md bg-white/5 peer-checked:bg-orange-500 peer-checked:border-orange-500 transition-all" />
-                                        <Check className="absolute top-1.5 left-0.5 w-4 h-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none" />
-                                    </div>
-                                    <p className="text-xs text-gray-400 leading-relaxed group-hover:text-gray-300 transition-colors">
-                                        I have read, understood, and agree to the Terms, Refund Policy, Warranty Policy, and Anti-Chargeback terms. I acknowledge that all digital sales are final and that I am responsible for account security.
-                                    </p>
-                                </label>
+                                <div className="space-y-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowTOS(true)}
+                                        className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/10 hover:border-orange-500/30 hover:bg-orange-500/5 transition-all text-left group"
+                                    >
+                                        <div className="p-2 bg-orange-500/10 rounded-lg group-hover:bg-orange-500/20 transition-colors">
+                                            <ScrollText className="w-4 h-4 text-orange-500" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-xs font-bold text-gray-300 group-hover:text-white transition-colors">Read Terms & Conditions</p>
+                                            <p className="text-[10px] text-gray-600">Refund Policy, Warranty & Anti-Chargeback</p>
+                                        </div>
+                                        <ArrowRight className="w-4 h-4 text-gray-600 group-hover:text-orange-500 transition-colors" />
+                                    </button>
+                                    <label className="flex gap-4 cursor-pointer group">
+                                        <div className="relative flex items-start pt-1">
+                                            <input
+                                                type="checkbox"
+                                                className="peer sr-only"
+                                                checked={termsAccepted}
+                                                onChange={(e) => setTermsAccepted(e.target.checked)}
+                                                disabled={isProcessing}
+                                            />
+                                            <div className="w-5 h-5 border border-white/20 rounded-md bg-white/5 peer-checked:bg-orange-500 peer-checked:border-orange-500 transition-all" />
+                                            <Check className="absolute top-1.5 left-0.5 w-4 h-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none" />
+                                        </div>
+                                        <p className="text-xs text-gray-400 leading-relaxed group-hover:text-gray-300 transition-colors">
+                                            I have read, understood, and agree to the <span className="text-orange-400 font-semibold">Terms</span>, <span className="text-orange-400 font-semibold">Refund Policy</span>, <span className="text-orange-400 font-semibold">Warranty Policy</span>, and <span className="text-orange-400 font-semibold">Anti-Chargeback</span> terms. I acknowledge that all digital sales are final and that I am responsible for account security.
+                                        </p>
+                                    </label>
+                                </div>
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <button
@@ -608,6 +626,115 @@ function OrderConfirmationModal({ isOpen, onClose, product, user, formatPrice, r
                         )}
                     </div>
                 </motion.div>
+
+                {/* TOS Modal */}
+                <AnimatePresence>
+                    {showTOS && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 z-[1001] flex items-center justify-center"
+                        >
+                            <div className="absolute inset-0 bg-black/90 backdrop-blur-sm" onClick={() => setShowTOS(false)} />
+                            <motion.div
+                                initial={{ scale: 0.95, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.95, opacity: 0 }}
+                                className="relative w-full max-w-2xl max-h-[80vh] bg-[#0a0a0a] border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <div className="flex items-center justify-between p-6 border-b border-white/10">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-orange-500/10 rounded-xl">
+                                            <ScrollText className="w-5 h-5 text-orange-500" />
+                                        </div>
+                                        <h3 className="text-lg font-black italic uppercase tracking-tighter">Terms & Conditions</h3>
+                                    </div>
+                                    <button onClick={() => setShowTOS(false)} className="p-2 hover:bg-white/5 rounded-full text-gray-500 hover:text-white transition-colors">
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+                                <div className="flex-1 overflow-y-auto p-6 space-y-6 text-sm text-gray-300 leading-relaxed custom-scrollbar">
+                                    <section>
+                                        <h4 className="text-white font-black uppercase tracking-wider text-xs mb-3">1. Acceptance of Terms</h4>
+                                        <p>By accessing or using this website and placing an order, you represent that you have read, understood, and agreed to be bound by all terms, policies, and conditions set forth herein. If you do not agree to any of these terms, you are prohibited from using this website or purchasing any products.</p>
+                                    </section>
+                                    <section>
+                                        <h4 className="text-white font-black uppercase tracking-wider text-xs mb-3">2. Nature of Services</h4>
+                                        <p>This website is operated by a single-seller digital goods provider, offering game accounts, gift cards, and in-game currency top-ups. No third-party sellers or marketplaces are involved. We are not affiliated with any game publisher, including but not limited to Epic Games, Riot Games, or other developers.</p>
+                                    </section>
+                                    <section>
+                                        <h4 className="text-white font-black uppercase tracking-wider text-xs mb-3">3. Digital Product Disclaimer</h4>
+                                        <p>All products are digital and delivered electronically. Upon delivery, the product is considered fulfilled and used. All digital sales are final. Any resale, unauthorized use, or misrepresentation of products is strictly prohibited.</p>
+                                    </section>
+                                    <section>
+                                        <h4 className="text-white font-black uppercase tracking-wider text-xs mb-3">4. Payment Terms</h4>
+                                        <ul className="list-disc list-inside space-y-1.5 text-gray-400">
+                                            <li>All orders must be paid in full prior to processing.</li>
+                                            <li>Accepted payment methods: PayPal, Stripe, and cryptocurrency.</li>
+                                            <li>Payments are processed securely via authorized third-party processors. We do not store sensitive payment information.</li>
+                                            <li>Prices include applicable taxes, fees, or VAT unless explicitly stated otherwise.</li>
+                                            <li>All currency conversion losses or payment fees applied by third parties are the responsibility of the buyer.</li>
+                                        </ul>
+                                    </section>
+                                    <section>
+                                        <h4 className="text-white font-black uppercase tracking-wider text-xs mb-3">5. Refund Policy</h4>
+                                        <ul className="list-disc list-inside space-y-1.5 text-gray-400">
+                                            <li>Refunds are strictly limited and considered only in cases of non-delivery, invalid credentials, or product mismatch.</li>
+                                            <li>Refunds do not include taxes, payment fees, or currency conversion losses.</li>
+                                            <li>Buyers must report issues immediately upon delivery and before using the product.</li>
+                                        </ul>
+                                    </section>
+                                    <section>
+                                        <h4 className="text-white font-black uppercase tracking-wider text-xs mb-3">6. Warranty Policy</h4>
+                                        <ul className="list-disc list-inside space-y-1.5 text-gray-400">
+                                            <li>Standard account warranty: 14 days, covering pullback only.</li>
+                                            <li>Extended warranty: 3 months or 6 months, purchasable separately, also pullback only.</li>
+                                            <li>Warranty does not cover email changes, lost credentials, hacked email, or account bans.</li>
+                                            <li>Warranty claims must be submitted via support and include evidence of pullback.</li>
+                                        </ul>
+                                    </section>
+                                    <section>
+                                        <h4 className="text-white font-black uppercase tracking-wider text-xs mb-3">7. Anti-Chargeback Clause</h4>
+                                        <ul className="list-disc list-inside space-y-1.5 text-gray-400">
+                                            <li>By placing an order, the buyer acknowledges that all transactions are final and agrees not to initiate chargebacks or disputes without first contacting support.</li>
+                                            <li>Unauthorized chargebacks or disputes may result in permanent account suspension and collection actions.</li>
+                                        </ul>
+                                        <div className="mt-3 p-3 rounded-xl bg-red-500/5 border border-red-500/20">
+                                            <p className="text-red-400 text-xs font-bold">Any unauthorized chargeback will result in:</p>
+                                            <ul className="list-disc list-inside space-y-1 text-red-400/80 text-xs mt-1">
+                                                <li>Permanent account suspension</li>
+                                                <li>Forfeiture of warranty</li>
+                                                <li>Collection action to recover the transaction amount</li>
+                                            </ul>
+                                        </div>
+                                    </section>
+                                    <section>
+                                        <h4 className="text-white font-black uppercase tracking-wider text-xs mb-3">8. Buyer Responsibility & Security</h4>
+                                        <ul className="list-disc list-inside space-y-1.5 text-gray-400">
+                                            <li>Buyers are solely responsible for securing accounts after delivery.</li>
+                                            <li>Failure to follow recommended security measures voids warranty.</li>
+                                            <li>We are not liable for account bans or other restrictions imposed by game publishers.</li>
+                                        </ul>
+                                    </section>
+                                    <section>
+                                        <h4 className="text-white font-black uppercase tracking-wider text-xs mb-3">9. Updates</h4>
+                                        <p>We reserve the right to modify these terms at any time. Continued use constitutes acceptance of updated terms.</p>
+                                    </section>
+                                </div>
+                                <div className="p-6 border-t border-white/10">
+                                    <button
+                                        onClick={() => setShowTOS(false)}
+                                        className="w-full py-3 bg-orange-600 hover:bg-orange-500 text-white rounded-2xl font-black italic uppercase tracking-widest transition-all"
+                                    >
+                                        Close
+                                    </button>
+                                </div>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
         </AnimatePresence>
     );

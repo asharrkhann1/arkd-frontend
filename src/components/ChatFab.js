@@ -748,7 +748,6 @@ export default function ChatFab() {
 
           {activeTab === 'help' && selectedArticle && (
             <div className="flex-1 flex flex-col bg-[#0b0b0b] overflow-hidden">
-              {/* Article Header with TOC */}
               <div className="px-4 py-4 border-b border-white/[0.08] space-y-3">
                 <button
                   onClick={() => setSelectedArticle(null)}
@@ -759,7 +758,6 @@ export default function ChatFab() {
                 </button>
                 <h2 className="text-lg font-black text-white">{selectedArticle.metadata?.name}</h2>
 
-                {/* Table of Contents Dropdown */}
                 {selectedArticle.contents && selectedArticle.contents.length > 0 && (
                   <div className="relative">
                     <label className="text-[9px] font-black uppercase tracking-widest text-gray-500 block mb-1">Jump to section</label>
@@ -772,7 +770,6 @@ export default function ChatFab() {
                         setTimeout(() => {
                           const el = document.getElementById(`article-section-${idx}`);
                           if (el) {
-                            // Scroll element into view with center alignment
                             el.scrollIntoView({
                               behavior: 'smooth',
                               block: 'center',
@@ -780,7 +777,6 @@ export default function ChatFab() {
                             });
                           }
                         }, 50);
-                        // Remove highlight after animation
                         setTimeout(() => setHighlightedSection(null), 2000);
                       }}
                       className="w-full px-3 py-2 bg-white/[0.03] border border-white/[0.08] rounded-lg text-sm text-white outline-none focus:border-orange-500/50 appearance-none cursor-pointer"
@@ -796,7 +792,6 @@ export default function ChatFab() {
                 )}
               </div>
 
-              {/* Article Content */}
               <div
                 ref={articleContentRef}
                 className="flex-1 overflow-y-auto px-4 py-6"
@@ -805,7 +800,6 @@ export default function ChatFab() {
                   scrollbarColor: 'rgba(249, 115, 22, 0.4) transparent',
                 }}
                 onWheel={(e) => {
-                  // Prevent scroll from propagating to background
                   const container = articleContentRef.current;
                   if (container) {
                     const { scrollTop, scrollHeight, clientHeight } = container;
