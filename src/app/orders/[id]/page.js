@@ -282,7 +282,7 @@ export default function OrderDetailPage() {
                     animate={{ opacity: 1, y: 0 }}
                     className="bg-[#0a0a0a] border border-white/5 rounded-[3rem] p-8 md:p-12 mb-8 relative overflow-hidden"
                 >
-                    <div className="absolute top-0 right-0 p-8 opacity-[0.07]">
+                    <div className="absolute top-0 right-0 p-8 opacity-[0.15]">
                         {order.product_snapshot?.product_category ? (
                             <img
                                 src={getProductCategoryLogo(order.product_snapshot.product_category)}

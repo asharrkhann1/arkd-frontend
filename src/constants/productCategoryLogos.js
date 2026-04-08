@@ -1,45 +1,58 @@
 // Product category to logo mappings
 export const productCategoryLogos = {
   // Games
+  // apex
   'apex-legends': '/logos/apex-legend.png',
   'apex legend': '/logos/apex-legend.png',
   'apex': '/logos/apex-legend.png',
   
+  // cod
   'call-of-duty': '/logos/call-of-duty-skull.png',
   'cod': '/logos/call-of-duty-skull.png',
   'callofduty': '/logos/call-of-duty-skull.png',
   
+  // cs
   'counter-strike': '/logos/counter-strike-2.png',
   'cs2': '/logos/counter-strike-2.png',
   'csgo': '/logos/counter-strike-2.png',
   'counter strike': '/logos/counter-strike-2.png',
   
+  // fn
   'fortnite': '/logos/fortnite.png',
   
+  // gta
   'gta-v': '/logos/gta-v.png',
   'gta5': '/logos/gta-v.png',
   'grand theft auto': '/logos/gta-v.png',
   
+  // overwatch
   'overwatch': '/logos/overwatch.png',
   
+  // pokemon
   'pokemon-go': '/logos/pokemon-go.png',
   'pokemon': '/logos/pokemon-go.png',
   
+  // rainbow6
   'rainbow-six': '/logos/rainbow-six-siege.png',
   'rainbow six': '/logos/rainbow-six-siege.png',
   'r6': '/logos/rainbow-six-siege.png',
   
+  // roblox
   'roblox': '/logos/roblox.png',
   
+  // rocket-league
   'rocket-league': '/logos/rocket-league.png',
   'rocket league': '/logos/rocket-league.png',
   
+  // osrs
   'runescape': '/logos/rs-old-school.png',
   'old-school': '/logos/rs-old-school.png',
   'osrs': '/logos/rs-old-school.png',
   
+  // valo
   'valorant': '/logos/valorant.png',
   
+  // wow
   'world-of-warcraft': '/logos/world-of-warcraft.png',
   'wow': '/logos/world-of-warcraft.png',
   

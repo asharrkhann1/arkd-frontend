@@ -30,6 +30,9 @@ const Footer = () => {
                             <a href="https://www.instagram.com/arkd.shop" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-gray-400 hover:bg-orange-500/10 hover:border-orange-500/30 hover:text-orange-400 transition-all duration-300">
                                 <Instagram className="w-5 h-5" />
                             </a>
+                            <a href="https://www.facebook.com/arkdshop" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-gray-400 hover:bg-orange-500/10 hover:border-orange-500/30 hover:text-orange-400 transition-all duration-300">
+                                <Facebook className="w-5 h-5" />
+                            </a>
                             <a href="https://x.com/ARKDshop" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-gray-400 hover:bg-orange-500/10 hover:border-orange-500/30 hover:text-orange-400 transition-all duration-300">
                                 <Twitter className="w-5 h-5" />
                             </a>

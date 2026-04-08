@@ -263,6 +263,29 @@ export default function ChatFab() {
     }
   }, [chatOpen, socketConnected, socketEmit]);
 
+  // Sync when chat opens to catch messages received while closed
+  useEffect(() => {
+    if (!chatOpen || !isAuthed) return;
+    sync();
+  }, [chatOpen, isAuthed, sync]);
+
+  // Sync on tab visibility change (user switches back to tab)
+  useEffect(() => {
+    if (!isAuthed) return;
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') sync();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [isAuthed, sync]);
+
+  // Polling fallback: sync every 20s to catch any missed messages
+  useEffect(() => {
+    if (!isAuthed) return;
+    const interval = setInterval(() => sync(), 20000);
+    return () => clearInterval(interval);
+  }, [isAuthed, sync]);
+
   useEffect(() => {
     if (!chatOpen) return;
     setError('');

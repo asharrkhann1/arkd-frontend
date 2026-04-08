@@ -4,8 +4,8 @@ import Link from 'next/link';
 import { ArrowRight, Sparkles, Search, X } from 'lucide-react';
 import { useData } from '@/contexts/DataContext';
 import { serviceConfigs } from '@/constants/servicesConfig';
-import { getGameIcon, getGameColors } from '@/constants/gameIcons';
-import { getProductCategoryLogo, getAdditionalLogos } from '@/constants/productCategoryLogos';
+import { getGameColors } from '@/constants/gameIcons';
+import { getProductCategoryLogo } from '@/constants/productCategoryLogos';
 
 const FeaturedCategories = () => {
     const { services, serviceCategories, categoryToServicesMap } = useData();
@@ -129,15 +129,20 @@ const FeaturedCategories = () => {
                             <div className="space-y-3">
                                 {searchResults.map((result, idx) => {
                                     if (result.type === 'category') {
-                                        const GameIcon = getGameIcon(result.title);
                                         const gameColors = getGameColors(result.title);
+                                        const categoryLogo = getProductCategoryLogo(result.title);
                                         return (
                                             <div key={`category-${result.title}-${idx}`} className="flex items-center gap-4">
                                                 {/* Game Icon */}
                                                 <div className="flex items-center gap-3 flex-shrink-0">
                                                     <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${gameColors.dot} p-[1px]`}>
-                                                        <div className="w-full h-full rounded-lg bg-[#141419] flex items-center justify-center">
-                                                            <GameIcon className="w-4 h-4 text-white" />
+                                                        <div className="w-full h-full rounded-lg bg-[#141419] flex items-center justify-center overflow-hidden">
+                                                            <img
+                                                                src={categoryLogo}
+                                                                alt={result.title}
+                                                                className="w-5 h-5 object-contain"
+                                                                onError={(e) => { e.target.src = '/logos/steam.png'; }}
+                                                            />
                                                         </div>
                                                     </div>
                                                     <span className="text-sm font-black text-white uppercase tracking-wider">
@@ -265,22 +270,21 @@ const FeaturedCategories = () => {
                                 <div className="p-3 flex flex-col gap-2">
                                     <div className="grid grid-cols-3 gap-2">
                                         {cats.length > 0 ? (
-                                            cats.slice(0, 6).map((cat) => {
+                                            cats.slice(0, 3).map((cat) => {
                                                 const logo = getProductCategoryLogo(cat);
                                                 return (
                                                     <Link
                                                         key={cat}
                                                         href={`${svc.href}/${cat}`}
-                                                        className="group relative overflow-hidden rounded bg-white/[0.04] border border-white/[0.06] hover:border-orange-500/30 hover:bg-orange-500/10 transition-all duration-300 aspect-square flex items-center justify-center"
+                                                        className="group relative overflow-hidden rounded-lg bg-white/[0.04] border border-white/[0.06] hover:border-orange-500/30 hover:bg-orange-500/10 transition-all duration-300 aspect-square flex items-center justify-center p-2"
                                                         title={cat}
                                                     >
-                                                        {/* Logo image */}
                                                         <img
                                                             src={logo}
                                                             alt={cat}
-                                                            className="w-8 h-8 object-contain opacity-60 group-hover:opacity-90 transition-opacity"
+                                                            className="w-14 h-14 object-contain opacity-70 group-hover:opacity-100 transition-opacity"
                                                             onError={(e) => {
-                                                                e.target.src = '/logos/steam.png'; // Fallback
+                                                                e.target.src = '/logos/steam.png';
                                                             }}
                                                         />
                                                     </Link>
@@ -293,32 +297,13 @@ const FeaturedCategories = () => {
                                         )}
                                     </div>
 
-                                    {/* +4 More section */}
-                                    {cats.length > 6 && (
-                                        <div className="grid grid-cols-4 gap-1 mt-1">
-                                            {getAdditionalLogos(4).map((logo, idx) => (
-                                                <div
-                                                    key={`additional-${idx}`}
-                                                    className="relative overflow-hidden rounded bg-white/[0.02] border border-white/[0.04] aspect-square flex items-center justify-center"
-                                                >
-                                                    <img
-                                                        src={logo}
-                                                        alt={`Additional service ${idx + 1}`}
-                                                        className="w-8 h-8 object-contain opacity-50"
-                                                    />
-                                                </div>
-                                            ))}
-                                            <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-orange-500/20 to-orange-600/20 border border-orange-500/30 aspect-square flex items-center justify-center group cursor-pointer">
-                                                <Link
-                                                    href={svc.href}
-                                                    className="absolute inset-0 flex items-center justify-center"
-                                                >
-                                                    <span className="text-lg font-black text-orange-400 group-hover:text-orange-300 transition-colors">
-                                                        +{cats.length - 6}
-                                                    </span>
-                                                </Link>
-                                            </div>
-                                        </div>
+                                    {cats.length > 3 && (
+                                        <Link
+                                            href={svc.href}
+                                            className="text-center text-[11px] font-bold text-orange-400/70 hover:text-orange-400 transition-colors py-1 block"
+                                        >
+                                            +{cats.length - 3} more
+                                        </Link>
                                     )}
                                 </div>
                             </div>

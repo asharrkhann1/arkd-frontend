@@ -222,13 +222,13 @@ export function useSocketChat({ enabled, activeUserId, receiverId, loadHistoryOn
 
     function onConnect() {
       setError('');
+      sync();
       if (loadHistoryOnConnect) {
         if (role === 'admin') {
           if (receiverId) loadHistory();
         } else {
           if (activeUserId) loadHistory();
         }
-        sync();
       }
     }
 

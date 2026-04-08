@@ -50,10 +50,10 @@ const WhyChooseUs = () => {
             <div className="container mx-auto px-4 relative z-10">
                 {/* Premium Section Header */}
                 <div className="text-center mb-14">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.03] border border-white/[0.08] mb-6">
+                    {/* <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.03] border border-white/[0.08] mb-6">
                         <Sparkles className="w-4 h-4 text-orange-400" />
                         <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Why We're #1</span>
-                    </div>
+                    </div> */}
                     <h2 className="text-4xl md:text-5xl font-black text-white mb-4 uppercase tracking-tight">
                         WHY CHOOSE <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-600">ARKD?</span>
                     </h2>
