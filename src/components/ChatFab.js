@@ -263,13 +263,11 @@ export default function ChatFab() {
     }
   }, [chatOpen, socketConnected, socketEmit]);
 
-  // Sync when chat opens to catch messages received while closed
   useEffect(() => {
     if (!chatOpen || !isAuthed) return;
     sync();
   }, [chatOpen, isAuthed, sync]);
 
-  // Sync on tab visibility change (user switches back to tab)
   useEffect(() => {
     if (!isAuthed) return;
     const handleVisibility = () => {
@@ -279,7 +277,6 @@ export default function ChatFab() {
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [isAuthed, sync]);
 
-  // Polling fallback: sync every 20s to catch any missed messages
   useEffect(() => {
     if (!isAuthed) return;
     const interval = setInterval(() => sync(), 20000);
@@ -314,7 +311,6 @@ export default function ChatFab() {
     lastProcessedMessageIdRef.current = lastId;
 
     if (chatOpen) {
-      // Auto-scroll to newest message when chat is open
       setTimeout(() => {
         if (bottomRef.current) bottomRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
       }, 50);
@@ -328,7 +324,6 @@ export default function ChatFab() {
     }
   }, [chatOpen, isAdmin, messages, role, beepMuted]);
 
-  // Scroll detection for showing "scroll to bottom" button
   const handleScroll = useCallback((e) => {
     const el = e.target;
     const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;

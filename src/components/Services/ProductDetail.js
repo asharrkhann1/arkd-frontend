@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
     ChevronLeft,
+    ChevronRight,
     ShoppingCart,
     Zap,
     ShieldCheck,
@@ -57,7 +58,8 @@ export default function ProductDetail({ product, type, category }) {
         return all;
     }, [product.thumbnail_image, product.images]);
 
-    const [mainImage, setMainImage] = useState(images[0]);
+    const [currentImageIndex, setCurrentImageIndex] = useState(0);
+    const mainImage = images[currentImageIndex] ?? images[0];
 
     const isVerified = user?.is_verified;
     const isOutOfStock = (Number(product.quantity_available) || 0) < 1;
@@ -114,6 +116,25 @@ export default function ProductDetail({ product, type, category }) {
                                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                             />
 
+                            {images.length > 1 && (
+                                <>
+                                    <button
+                                        type="button"
+                                        onClick={() => setCurrentImageIndex(i => (i - 1 + images.length) % images.length)}
+                                        className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/60 border border-white/10 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/80 hover:border-white/20 transition-all opacity-0 group-hover:opacity-100"
+                                    >
+                                        <ChevronLeft className="w-5 h-5" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setCurrentImageIndex(i => (i + 1) % images.length)}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/60 border border-white/10 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/80 hover:border-white/20 transition-all opacity-0 group-hover:opacity-100"
+                                    >
+                                        <ChevronRight className="w-5 h-5" />
+                                    </button>
+                                </>
+                            )}
+
                             <div className="absolute top-8 left-8 flex flex-col gap-3">
                                 {(product.delivery_type === 'auto' || product.delivery_type === 'instant') && (
                                     <div className="px-5 py-2 bg-orange-600 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white flex items-center gap-2 shadow-[0_0_30px_rgba(234,88,12,0.4)]">
@@ -132,8 +153,8 @@ export default function ProductDetail({ product, type, category }) {
                             {images.map((img, idx) => (
                                 <button
                                     key={idx}
-                                    onClick={() => setMainImage(img)}
-                                    className={`aspect-video rounded-2xl overflow-hidden border-2 transition-all ${mainImage === img ? 'border-orange-500 scale-105 ring-4 ring-orange-500/10' : 'border-white/5 opacity-50 hover:opacity-100'
+                                    onClick={() => setCurrentImageIndex(idx)}
+                                    className={`aspect-video rounded-2xl overflow-hidden border-2 transition-all ${currentImageIndex === idx ? 'border-orange-500 scale-105 ring-4 ring-orange-500/10' : 'border-white/5 opacity-50 hover:opacity-100'
                                         }`}
                                 >
                                     <img src={img} className="w-full h-full object-cover" />
@@ -567,38 +588,29 @@ function OrderConfirmationModal({ isOpen, onClose, product, user, formatPrice, r
                                     )}
                                 </div>
 
-                                <div className="space-y-3">
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowTOS(true)}
-                                        className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/10 hover:border-orange-500/30 hover:bg-orange-500/5 transition-all text-left group"
-                                    >
-                                        <div className="p-2 bg-orange-500/10 rounded-lg group-hover:bg-orange-500/20 transition-colors">
-                                            <ScrollText className="w-4 h-4 text-orange-500" />
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className="text-xs font-bold text-gray-300 group-hover:text-white transition-colors">Read Terms & Conditions</p>
-                                            <p className="text-[10px] text-gray-600">Refund Policy, Warranty & Anti-Chargeback</p>
-                                        </div>
-                                        <ArrowRight className="w-4 h-4 text-gray-600 group-hover:text-orange-500 transition-colors" />
-                                    </button>
-                                    <label className="flex gap-4 cursor-pointer group">
-                                        <div className="relative flex items-start pt-1">
-                                            <input
-                                                type="checkbox"
-                                                className="peer sr-only"
-                                                checked={termsAccepted}
-                                                onChange={(e) => setTermsAccepted(e.target.checked)}
-                                                disabled={isProcessing}
-                                            />
-                                            <div className="w-5 h-5 border border-white/20 rounded-md bg-white/5 peer-checked:bg-orange-500 peer-checked:border-orange-500 transition-all" />
-                                            <Check className="absolute top-1.5 left-0.5 w-4 h-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none" />
-                                        </div>
-                                        <p className="text-xs text-gray-400 leading-relaxed group-hover:text-gray-300 transition-colors">
-                                            I have read, understood, and agree to the <span className="text-orange-400 font-semibold">Terms</span>, <span className="text-orange-400 font-semibold">Refund Policy</span>, <span className="text-orange-400 font-semibold">Warranty Policy</span>, and <span className="text-orange-400 font-semibold">Anti-Chargeback</span> terms. I acknowledge that all digital sales are final and that I am responsible for account security.
-                                        </p>
-                                    </label>
-                                </div>
+                                <label className="flex gap-4 cursor-pointer group">
+                                    <div className="relative flex items-start pt-1">
+                                        <input
+                                            type="checkbox"
+                                            className="peer sr-only"
+                                            checked={termsAccepted}
+                                            onChange={(e) => setTermsAccepted(e.target.checked)}
+                                            disabled={isProcessing}
+                                        />
+                                        <div className="w-5 h-5 border border-white/20 rounded-md bg-white/5 peer-checked:bg-orange-500 peer-checked:border-orange-500 transition-all" />
+                                        <Check className="absolute top-1.5 left-0.5 w-4 h-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none" />
+                                    </div>
+                                    <p className="text-xs text-gray-400 leading-relaxed group-hover:text-gray-300 transition-colors">
+                                        I have read, understood, and agree to the <span className="text-orange-400 font-semibold">Terms</span>, <span className="text-orange-400 font-semibold">Refund Policy</span>, <span className="text-orange-400 font-semibold">Warranty Policy</span>, and <span className="text-orange-400 font-semibold">Anti-Chargeback</span> terms. I acknowledge that all digital sales are final and that I am responsible for account security.{' '}
+                                        <button
+                                            type="button"
+                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowTOS(true); }}
+                                            className="text-orange-400 font-semibold underline underline-offset-2 hover:text-orange-300 transition-colors"
+                                        >
+                                            Click here to read agreement.
+                                        </button>
+                                    </p>
+                                </label>
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <button
