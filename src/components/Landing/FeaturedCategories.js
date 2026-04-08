@@ -268,7 +268,7 @@ const FeaturedCategories = () => {
 
                                 {/* Premium Content Area */}
                                 <div className="p-3 flex flex-col gap-2">
-                                    <div className="grid grid-cols-3 gap-2">
+                                    <div className="grid grid-cols-3 gap-1">
                                         {cats.length > 0 ? (
                                             cats.slice(0, 3).map((cat) => {
                                                 const logo = getProductCategoryLogo(cat);
@@ -276,7 +276,7 @@ const FeaturedCategories = () => {
                                                     <Link
                                                         key={cat}
                                                         href={`${svc.href}/${cat}`}
-                                                        className="group relative overflow-hidden rounded-lg bg-white/[0.04] border border-white/[0.06] hover:border-orange-500/30 hover:bg-orange-500/10 transition-all duration-300 aspect-square flex items-center justify-center p-2"
+                                                        className="group relative overflow-hidden rounded-lg bg-white/[0.04] border border-white/[0.06] hover:border-orange-500/30 hover:bg-orange-500/10 transition-all duration-300 aspect-square flex items-center justify-center p-0.5"
                                                         title={cat}
                                                     >
                                                         <img

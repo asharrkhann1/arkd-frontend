@@ -1,14 +1,14 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 import { getBackgroundForOrigin } from '@/constants/backgroundMappings';
 import { getProductCategoryLogo } from '@/constants/productCategoryLogos';
 import {
-    Coins, Loader2, ShieldCheck, Clock, Package, ChevronRight, ArrowLeft
+    Coins, Loader2, ShieldCheck, Clock, Package, ChevronRight, ArrowLeft, Search, ChevronDown, X, Trophy
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 function safeJsonParse(v) {
     if (!v) return null;
@@ -88,6 +88,10 @@ export default function CurrencyCategoryPage({ params }) {
 
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [activeFilters, setActiveFilters] = useState({});
+    const [openDropdowns, setOpenDropdowns] = useState({});
+    const dropdownRefs = useRef({});
 
     const fetchProducts = useCallback(async () => {
         try {
@@ -107,7 +111,109 @@ export default function CurrencyCategoryPage({ params }) {
 
     useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
+    // Extract dynamic filters from product specs
+    const dynamicFilters = useMemo(() => {
+        const filters = {};
+        products.forEach(p => {
+            if (p.specs) {
+                Object.entries(p.specs).forEach(([key, specObj]) => {
+                    if (specObj && specObj.value !== undefined) {
+                        const type = specObj.type || 'select';
+                        if (!filters[key]) {
+                            filters[key] = {
+                                label: specObj.label || key.charAt(0).toUpperCase() + key.slice(1),
+                                type: type,
+                                options: new Set(),
+                                min: Infinity,
+                                max: -Infinity
+                            };
+                        }
+                        if (type === 'range') {
+                            const val = Number(specObj.value);
+                            if (val < filters[key].min) filters[key].min = val;
+                            if (val > filters[key].max) filters[key].max = val;
+                        } else {
+                            filters[key].options.add(specObj.value);
+                        }
+                    }
+                });
+            }
+        });
+        return Object.entries(filters).map(([key, data]) => ({
+            key,
+            label: data.label,
+            type: data.type,
+            options: data.type === 'select' ? Array.from(data.options).sort() : [],
+            min: data.type === 'range' ? data.min : 0,
+            max: data.type === 'range' ? data.max : 0
+        })).sort((a, b) => {
+            if (a.type === 'select' && b.type === 'range') return -1;
+            if (a.type === 'range' && b.type === 'select') return 1;
+            return 0;
+        });
+    }, [products]);
+
+    // Filter products
+    const filteredProducts = useMemo(() => {
+        return products.filter(p => {
+            const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+            const matchesSpecs = Object.entries(activeFilters).every(([key, filterVal]) => {
+                const specItem = p.specs?.[key];
+                if (!specItem) return true;
+                if (specItem.type === 'range') {
+                    const itemValue = Number(specItem.value);
+                    const [min, max] = filterVal;
+                    return itemValue >= min && itemValue <= max;
+                } else {
+                    if (!filterVal || filterVal.length === 0) return true;
+                    return filterVal.includes(specItem.value);
+                }
+            });
+            return matchesSearch && matchesSpecs;
+        });
+    }, [products, searchQuery, activeFilters]);
+
+    const toggleDropdown = (key) => {
+        setOpenDropdowns(prev => {
+            const newState = {};
+            Object.keys(prev).forEach(k => newState[k] = k === key ? !prev[k] : false);
+            newState[key] = !prev[key];
+            return newState;
+        });
+    };
+
+    const handleFilterChange = (key, value, type) => {
+        setActiveFilters(prev => {
+            if (type === 'range') {
+                return { ...prev, [key]: value };
+            }
+            const current = prev[key] || [];
+            if (current.includes(value)) {
+                const next = current.filter(v => v !== value);
+                const newState = { ...prev };
+                if (next.length === 0) delete newState[key];
+                else newState[key] = next;
+                return newState;
+            }
+            return { ...prev, [key]: [...current, value] };
+        });
+    };
+
+    const clearFilters = () => {
+        setSearchQuery('');
+        setActiveFilters({});
+        setOpenDropdowns({});
+    };
+
+    const activeFilterCount = Object.keys(activeFilters).length + (searchQuery ? 1 : 0);
+
     // Group by name, show cheapest variant as the card
+    const filteredProductGroups = filteredProducts.reduce((acc, p) => {
+        if (!acc[p.name]) acc[p.name] = [];
+        acc[p.name].push(p);
+        return acc;
+    }, {});
+
     const productGroups = products.reduce((acc, p) => {
         if (!acc[p.name]) acc[p.name] = [];
         acc[p.name].push(p);
@@ -140,8 +246,90 @@ export default function CurrencyCategoryPage({ params }) {
                         <span className="text-orange-500 text-[10px] uppercase">{category}</span>
                     </div>
 
+                    {/* Filter Bar */}
+                    <div className="bg-[#0a0a0a] border border-white/5 rounded-2xl p-4 space-y-4 mb-8">
+                        <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+                            <div className="flex items-center gap-3 flex-1 w-full lg:w-auto">
+                                <div className="relative flex-1 max-w-md">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                                    <input
+                                        type="text"
+                                        placeholder="Search products..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="w-full bg-black border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-white text-sm focus:border-orange-500/50 outline-none transition-all"
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3 w-full lg:w-auto">
+                                <p className="text-xs text-gray-500 whitespace-nowrap">
+                                    <span className="text-white font-bold">{filteredProducts.length}</span> items
+                                </p>
+                                {activeFilterCount > 0 && (
+                                    <button
+                                        onClick={clearFilters}
+                                        className="flex items-center gap-1.5 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-red-400 hover:text-red-300 transition-colors border border-red-500/20 rounded-xl hover:bg-red-500/10"
+                                    >
+                                        <X className="w-3 h-3" />
+                                        Clear ({activeFilterCount})
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                        {dynamicFilters.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-white/5">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-600 mr-2">Filters:</span>
+                                {dynamicFilters.filter(f => f.type === 'select').map(filter => (
+                                    <div key={filter.key} className="relative" ref={el => dropdownRefs.current[filter.key] = el}>
+                                        <button
+                                            onClick={() => toggleDropdown(filter.key)}
+                                            className={`flex items-center gap-2 px-3 py-2 bg-black border rounded-xl text-xs transition-all ${activeFilters[filter.key]?.length > 0 ? 'border-orange-500/50 text-orange-400' : 'border-white/10 text-gray-300 hover:border-orange-500/30'}`}
+                                        >
+                                            <span className="text-[10px] uppercase font-bold">{filter.label}</span>
+                                            {activeFilters[filter.key]?.length > 0 && (
+                                                <span className="bg-orange-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">
+                                                    {activeFilters[filter.key].length}
+                                                </span>
+                                            )}
+                                            <ChevronDown className={`w-3 h-3 transition-transform ${openDropdowns[filter.key] ? 'rotate-180' : ''}`} />
+                                        </button>
+                                        <AnimatePresence>
+                                            {openDropdowns[filter.key] && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                    exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                                                    className="absolute top-full left-0 mt-2 w-56 bg-black border border-white/10 rounded-xl p-3 shadow-2xl z-50 max-h-64 overflow-y-auto"
+                                                >
+                                                    <div className="space-y-1">
+                                                        {filter.options.map(option => (
+                                                            <label key={option} className="flex items-center gap-2 cursor-pointer group p-1.5 rounded-lg hover:bg-white/5">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    className="peer sr-only"
+                                                                    checked={activeFilters[filter.key]?.includes(option) || false}
+                                                                    onChange={() => handleFilterChange(filter.key, option, 'select')}
+                                                                />
+                                                                <div className="w-4 h-4 border border-white/20 rounded peer-checked:bg-orange-500 peer-checked:border-orange-500 transition-all flex items-center justify-center">
+                                                                    <svg className="w-2.5 h-2.5 text-white opacity-0 peer-checked:opacity-100" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4">
+                                                                        <polyline points="20 6 9 17 4 12" />
+                                                                    </svg>
+                                                                </div>
+                                                                <span className="text-xs text-gray-400 group-hover:text-white capitalize">{option}</span>
+                                                            </label>
+                                                        ))}
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
                     {/* Header */}
-                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
                         <div>
                             <h1 className="text-6xl font-black italic tracking-tighter uppercase mb-3 leading-none">
                                 {category} <span className="text-orange-500">Currency</span>
@@ -173,21 +361,40 @@ export default function CurrencyCategoryPage({ params }) {
                             </Link>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                            {Object.entries(productGroups).map(([name, variants]) => {
-                                const cheapest = variants.reduce((a, b) =>
-                                    Number(a.unit_price) <= Number(b.unit_price) ? a : b
-                                );
-                                return (
-                                    <CurrencyProductCard
-                                        key={name}
-                                        product={cheapest}
-                                        allVariants={variants}
-                                        category={category}
-                                    />
-                                );
-                            })}
-                        </div>
+                        <>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                                {Object.entries(filteredProductGroups).map(([name, variants]) => {
+                                    const cheapest = variants.reduce((a, b) =>
+                                        Number(a.unit_price) <= Number(b.unit_price) ? a : b
+                                    );
+                                    return (
+                                        <CurrencyProductCard
+                                            key={name}
+                                            product={cheapest}
+                                            allVariants={variants}
+                                            category={category}
+                                        />
+                                    );
+                                })}
+                            </div>
+                            {Object.keys(filteredProductGroups).length === 0 && (
+                                <div className="py-20 text-center bg-[#0a0a0a] border border-dashed border-white/10 rounded-3xl">
+                                    <div className="w-16 h-16 bg-white/[0.02] rounded-full flex items-center justify-center mx-auto mb-4 border border-white/5">
+                                        <Search className="w-8 h-8 text-gray-600" />
+                                    </div>
+                                    <h3 className="text-xl font-bold mb-2 uppercase tracking-tight">No products found</h3>
+                                    <p className="text-gray-500 max-w-sm mx-auto text-sm">
+                                        Try adjusting your filters or search query to find what you're looking for.
+                                    </p>
+                                    <button
+                                        onClick={clearFilters}
+                                        className="mt-4 px-4 py-2 bg-orange-500/10 border border-orange-500/30 rounded-xl text-orange-400 text-sm font-bold hover:bg-orange-500/20 transition-all"
+                                    >
+                                        Clear all filters
+                                    </button>
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
             </div>
