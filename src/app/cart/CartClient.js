@@ -22,14 +22,13 @@ import { User } from 'lucide-react';
 import AddonModal from '@/components/Services/AddonModal';
 
 export default function CartClient() {
-    const { cart, removeFromCart, updateQuantity, updateAddons, cartCount, clearCart } = useCart();
+    const { cart, removeFromCart, updateQuantity, updateAddons, cartCount } = useCart();
     const { formatPrice } = useCurrency();
     const { user } = useAuth();
 
     const [isCheckoutOpen, setIsCheckoutOpen] = React.useState(false);
     const [isLoginPromptOpen, setIsLoginPromptOpen] = React.useState(false);
     const [isAgreed, setIsAgreed] = React.useState(false);
-    const [confirmStep, setConfirmStep] = React.useState(false);
     const [isProcessing, setIsProcessing] = React.useState(false);
 
     // Addon Review step for instant buy
@@ -85,17 +84,29 @@ export default function CartClient() {
     const platformFee = subtotal * 0.05;
     const total = subtotal + platformFee;
 
-    const userCredits = user?.credits || 0;
-    const canAfford = userCredits >= total;
-
     const handlePayment = async () => {
         setIsProcessing(true);
-        setTimeout(() => {
+        try {
+            const cartPayload = cart.map(item => ({
+                product_id: item.id,
+                quantity: item.quantity || 1,
+                addons: item.selected_addons || {},
+            }));
+
+            const data = await import('@/lib/api').then(m => m.apiFetch('/payment/create-checkout', {
+                method: 'POST',
+                body: {
+                    type: 'cart',
+                    cart_items: cartPayload,
+                    terms_agreed: isAgreed,
+                },
+            }));
+
+            window.location.href = data.checkoutUrl;
+        } catch (err) {
             setIsProcessing(false);
-            setIsCheckoutOpen(false);
-            clearCart();
-            alert("Order placed successfully!");
-        }, 1500);
+            alert(err.message || 'Failed to start checkout');
+        }
     };
 
     const handleCheckoutClick = () => {
@@ -152,8 +163,8 @@ export default function CartClient() {
                             <ShieldCheck className="w-6 h-6 text-green-500" />
                         </div>
                         <div className="text-left">
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Wallet Balance</p>
-                            <p className="text-sm font-black italic text-white">{formatPrice(userCredits)}</p>
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Secure Checkout</p>
+                            <p className="text-sm font-black italic text-white">Powered by Stripe</p>
                         </div>
                     </div>
                 </div>
@@ -321,7 +332,7 @@ export default function CartClient() {
                             <div className="relative space-y-8">
                                 <div className="text-center space-y-2">
                                     <h2 className="text-4xl font-black italic uppercase tracking-tighter">Confirm <span className="text-orange-500">Order</span></h2>
-                                    <p className="text-gray-500 text-sm font-medium">Please review your final bag contents and wallet balance.</p>
+                                    <p className="text-gray-500 text-sm font-medium">Please review your final bag contents.</p>
                                 </div>
 
                                 <div className="space-y-4">
@@ -336,24 +347,8 @@ export default function CartClient() {
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Credits Needed</p>
-                                            <p className="text-xl font-black text-orange-500 italic">{total.toFixed(2)}</p>
-                                        </div>
-                                    </div>
-
-                                    <div className={`p-6 rounded-2xl border transition-all ${canAfford ? 'bg-green-500/5 border-green-500/20' : 'bg-red-500/5 border-red-500/20'}`}>
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-4">
-                                                <div className={`p-3 rounded-xl ${canAfford ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
-                                                    <CreditCard className={`w-5 h-5 ${canAfford ? 'text-green-500' : 'text-red-500'}`} />
-                                                </div>
-                                                <div>
-                                                    <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Available Balance</p>
-                                                    <p className={`text-xl font-black italic ${canAfford ? 'text-green-500' : 'text-red-500'}`}>
-                                                        {formatPrice(userCredits)}
-                                                    </p>
-                                                </div>
-                                            </div>
+                                            <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Via Stripe</p>
+                                            <CreditCard className="w-6 h-6 text-orange-500 ml-auto mt-1" />
                                         </div>
                                     </div>
                                 </div>
@@ -374,45 +369,18 @@ export default function CartClient() {
                                     </label>
 
                                     <div className="flex gap-4">
-                                        {!confirmStep ? (
-                                            <button
-                                                disabled={!isAgreed || !canAfford || isProcessing}
-                                                onClick={() => setConfirmStep(true)}
-                                                className="flex-1 py-5 bg-orange-600 disabled:opacity-30 disabled:grayscale hover:bg-orange-500 text-white rounded-2xl font-black italic uppercase tracking-widest transition-all shadow-2xl hover:-translate-y-1 flex items-center justify-center gap-3"
-                                            >
-                                                <Zap className="w-5 h-5 fill-current" /> Pay Now
-                                            </button>
-                                        ) : (
-                                            <button
-                                                disabled={isProcessing}
-                                                onClick={handlePayment}
-                                                className="flex-1 py-5 bg-green-600 hover:bg-green-500 text-white rounded-2xl font-black italic uppercase tracking-widest transition-all shadow-2xl hover:-translate-y-1 flex items-center justify-center gap-3"
-                                            >
-                                                {isProcessing ? (
-                                                    <div className="w-6 h-6 border-4 border-white/20 border-t-white animate-spin rounded-full" />
-                                                ) : (
-                                                    <>
-                                                        <ShieldCheck className="w-5 h-5" /> Confirm Payment
-                                                    </>
-                                                )}
-                                            </button>
-                                        )}
-                                        {confirmStep && (
-                                            <button
-                                                disabled={isProcessing}
-                                                onClick={() => setConfirmStep(false)}
-                                                className="px-6 py-5 bg-white/5 hover:bg-white/10 text-gray-500 hover:text-white rounded-2xl font-black italic uppercase transition-all"
-                                            >
-                                                Cancel
-                                            </button>
-                                        )}
+                                        <button
+                                            disabled={!isAgreed || isProcessing}
+                                            onClick={handlePayment}
+                                            className="flex-1 py-5 bg-orange-600 disabled:opacity-30 disabled:grayscale hover:bg-orange-500 text-white rounded-2xl font-black italic uppercase tracking-widest transition-all shadow-2xl hover:-translate-y-1 flex items-center justify-center gap-3"
+                                        >
+                                            {isProcessing ? (
+                                                <div className="w-6 h-6 border-4 border-white/20 border-t-white animate-spin rounded-full" />
+                                            ) : (
+                                                <><CreditCard className="w-5 h-5" /> Pay with Stripe</>
+                                            )}
+                                        </button>
                                     </div>
-
-                                    {!canAfford && (
-                                        <p className="text-center text-[10px] font-black text-red-500 uppercase tracking-widest animate-pulse">
-                                            Insufficient balance to complete trade
-                                        </p>
-                                    )}
                                 </div>
                             </div>
                         </motion.div>

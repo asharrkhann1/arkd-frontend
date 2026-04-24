@@ -15,7 +15,6 @@ import {
     ExternalLink,
     Maximize2,
     Info,
-    Wallet,
     Heart,
     Check,
     X,
@@ -369,38 +368,20 @@ function OrderConfirmationModal({ isOpen, onClose, product, user, formatPrice, r
     const handleConfirm = async () => {
         setIsProcessing(true);
         try {
-            // Fetch latest product data to get current stock
-            const response = await apiFetch(`/${product.id}`);
-            const latestProduct = response.product || response; // Handle both response formats
-
-            // Double-check stock with latest data
-            const availableStock = Number(latestProduct.quantity_available) || 0;
-            
-            if (availableStock < quantity) {
-                toast.error(`Only ${availableStock} items available in stock`);
-                return;
-            }
-
-            const payload = {
-                product_id: product.id,
-                quantity,
-                terms_and_agreed_checked: true,
-                addons: selectedAddons
-            };
-
-            await apiFetch('/orders', {
+            const data = await apiFetch('/payment/create-checkout', {
                 method: 'POST',
-                body: payload
+                body: {
+                    type: 'product',
+                    product_id: product.id,
+                    quantity,
+                    addons: selectedAddons,
+                    terms_agreed: true,
+                },
             });
-
-            toast.success('Order placed successfully!');
-            if (refreshAuth) await refreshAuth();
-            onClose();
-            if (onSuccess) onSuccess();
+            window.location.href = data.checkoutUrl;
         } catch (error) {
             console.error(error);
-            toast.error(error.message || 'Failed to place order');
-        } finally {
+            toast.error(error.message || 'Failed to start checkout');
             setIsProcessing(false);
         }
     };
@@ -573,21 +554,6 @@ function OrderConfirmationModal({ isOpen, onClose, product, user, formatPrice, r
                                     </div>
                                 </div>
 
-                                <div className="bg-black/20 rounded-xl p-4 border border-white/5 flex justify-between items-center">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-white/5 rounded-lg">
-                                            <Wallet className="w-5 h-5 text-gray-400" />
-                                        </div>
-                                        <div>
-                                            <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Available Balance</p>
-                                            <p className="font-bold text-white">{formatPrice(user?.credits || 0)}</p>
-                                        </div>
-                                    </div>
-                                    {Number(user?.credits || 0) < totalPrice && (
-                                        <span className="text-xs font-black text-red-500 bg-red-500/10 px-2 py-1 rounded">Insufficient Funds</span>
-                                    )}
-                                </div>
-
                                 <label className="flex gap-4 cursor-pointer group">
                                     <div className="relative flex items-start pt-1">
                                         <input
@@ -628,10 +594,10 @@ function OrderConfirmationModal({ isOpen, onClose, product, user, formatPrice, r
                                     </button>
                                     <button
                                         onClick={handleConfirm}
-                                        disabled={!termsAccepted || Number(user?.credits || 0) < totalPrice || isProcessing}
+                                        disabled={!termsAccepted || isProcessing}
                                         className="py-4 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl font-black italic uppercase tracking-widest transition-all shadow-lg hover:shadow-orange-500/20 flex items-center justify-center gap-2"
                                     >
-                                        {isProcessing ? 'Processing...' : 'Confirm'}
+                                        {isProcessing ? 'Redirecting...' : 'Pay with Stripe'}
                                     </button>
                                 </div>
                             </div>

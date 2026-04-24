@@ -114,20 +114,19 @@ export default function CurrencyProductPage({ params }) {
 
         setOrdering(true);
         try {
-            const data = await apiFetch('/orders/currency', {
+            const data = await apiFetch('/payment/create-checkout', {
                 method: 'POST',
                 body: {
+                    type: 'currency',
                     currency_product_id: activeProduct.id,
                     quantity,
                     specs: selectedSpecs,
-                    terms_and_agreed_checked: true,
+                    terms_agreed: true,
                 },
             });
-            toast.success(`Order #${data.order.id} placed!`);
-            router.push(`/orders/${data.order.id}`);
+            window.location.href = data.checkoutUrl;
         } catch (err) {
-            toast.error(err.message || 'Failed to place order');
-        } finally {
+            toast.error(err.message || 'Failed to start checkout');
             setOrdering(false);
         }
     };
@@ -369,11 +368,11 @@ export default function CurrencyProductPage({ params }) {
                                         className="w-full py-4 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 disabled:opacity-30 disabled:cursor-not-allowed text-white rounded-2xl font-black italic uppercase tracking-widest text-sm transition-all shadow-[0_4px_30px_rgba(234,88,12,0.3)] hover:shadow-[0_8px_40px_rgba(234,88,12,0.5)] flex items-center justify-center gap-3"
                                     >
                                         {ordering ? (
-                                            <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</>
+                                            <><Loader2 className="w-4 h-4 animate-spin" /> Redirecting...</>
                                         ) : !user ? (
                                             'Login to Buy'
                                         ) : (
-                                            `Buy ${quantity.toLocaleString()}${unit} — $${totalPrice.toFixed(2)}`
+                                            `Pay $${totalPrice.toFixed(2)} with Stripe`
                                         )}
                                     </button>
 
