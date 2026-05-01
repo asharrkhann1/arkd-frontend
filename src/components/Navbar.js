@@ -8,7 +8,6 @@ import { useData } from '@/contexts/DataContext';
 import {
     Search,
     User,
-    Plus,
     Heart,
     X,
     LogIn,
@@ -19,7 +18,6 @@ import {
     Users,
     Coins,
     Package,
-    Wallet,
     Gift,
     Zap,
     Headphones,
@@ -40,7 +38,7 @@ const Navbar = ({ initialPendingOrders = [] }) => {
     const { user, loading, logout } = useAuth();
     const { services, orders = [] } = useData();
     const { wishlist } = useWishlist();
-    const { selectedCurrency, setSelectedCurrency, formatPrice, availableCurrencies } = useCurrency();
+    const { selectedCurrency, setSelectedCurrency, availableCurrencies } = useCurrency();
     const wishlistCount = wishlist.length;
 
     const navigate = useRouter();
@@ -388,24 +386,9 @@ const Navbar = ({ initialPendingOrders = [] }) => {
                                                     <p className="text-sm font-bold text-white truncate">{user.username || user.name}</p>
                                                     <p className="text-[10px] text-gray-400 truncate uppercase tracking-widest">{user.email}</p>
                                                 </div>
-                                                <div className="flex items-center justify-between p-2.5 bg-gradient-to-r from-orange-500/10 to-orange-600/10 border border-orange-500/20 rounded-lg glassmorphism">
-                                                    <div className="flex items-center gap-2">
-                                                        <Wallet className="w-3.5 h-3.5 text-orange-500" />
-                                                        <span className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Balance</span>
-                                                    </div>
-                                                    <span className="text-xs font-black italic text-orange-500 tracking-tighter">{formatPrice(user.credits || 0)}</span>
-                                                </div>
-                                            </div>
+                                                            </div>
 
                                             <div className="p-2">
-                                                <Link
-                                                    href="/wallet"
-                                                    className="flex items-center space-x-3 px-3 py-2 text-sm text-gray-300 hover:bg-orange-500/10 hover:text-orange-500 rounded-lg transition-colors"
-                                                    onClick={() => setUserMenuOpen(false)}
-                                                >
-                                                    <Plus className="w-4 h-4" />
-                                                    <span>Add Balance</span>
-                                                </Link>
                                                 <Link
                                                     href="/orders"
                                                     className="flex items-center space-x-3 px-3 py-2 text-sm text-gray-300 hover:bg-orange-500/10 hover:text-orange-500 rounded-lg transition-colors"
@@ -421,14 +404,6 @@ const Navbar = ({ initialPendingOrders = [] }) => {
                                                 >
                                                     <Flag className="w-4 h-4" />
                                                     <span>My Disputes</span>
-                                                </Link>
-                                                <Link
-                                                    href="/wallet"
-                                                    className="flex items-center space-x-3 px-3 py-2 text-sm text-gray-300 hover:bg-orange-500/10 hover:text-orange-500 rounded-lg transition-colors"
-                                                    onClick={() => setUserMenuOpen(false)}
-                                                >
-                                                    <Wallet className="w-4 h-4" />
-                                                    <span>Wallet</span>
                                                 </Link>
                                                 <Link
                                                     href="/profile"
@@ -623,23 +598,8 @@ const Navbar = ({ initialPendingOrders = [] }) => {
                                                         <span className="text-xs text-gray-400 truncate">{user.email}</span>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center justify-between p-3 bg-orange-600/5">
-                                                    <div className="flex items-center gap-2">
-                                                        <Wallet className="w-4 h-4 text-orange-500" />
-                                                        <span className="text-xs font-black uppercase text-gray-500 tracking-wider">Balance</span>
-                                                    </div>
-                                                    <span className="text-sm font-black italic text-orange-500 tracking-tighter">{formatPrice(user.credits || 0)}</span>
-                                                </div>
                                             </div>
                                             <div className="grid grid-cols-2 gap-2">
-                                                <Link
-                                                    href="/wallet"
-                                                    className="flex items-center justify-center space-x-2 bg-orange-600/10 p-2.5 rounded-lg text-sm text-orange-500 border border-orange-500/20"
-                                                    onClick={() => setMobileMenuOpen(false)}
-                                                >
-                                                    <Plus className="w-4 h-4" />
-                                                    <span>Add Balance</span>
-                                                </Link>
                                                 <Link
                                                     href="/orders"
                                                     className="flex items-center justify-center space-x-2 bg-gray-800 p-2.5 rounded-lg text-sm text-gray-300"
@@ -655,14 +615,6 @@ const Navbar = ({ initialPendingOrders = [] }) => {
                                                 >
                                                     <Flag className="w-4 h-4" />
                                                     <span>Disputes</span>
-                                                </Link>
-                                                <Link
-                                                    href="/wallet"
-                                                    className="flex items-center justify-center space-x-2 bg-gray-800 p-2.5 rounded-lg text-sm text-gray-300"
-                                                    onClick={() => setMobileMenuOpen(false)}
-                                                >
-                                                    <Wallet className="w-4 h-4" />
-                                                    <span>Wallet</span>
                                                 </Link>
                                                 <Link
                                                     href="/profile"

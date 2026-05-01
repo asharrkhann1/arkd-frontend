@@ -21,7 +21,8 @@ import {
     Minus,
     Plus,
     Trophy,
-    ScrollText
+    ScrollText,
+    Wallet
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
