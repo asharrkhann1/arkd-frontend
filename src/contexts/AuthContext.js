@@ -145,10 +145,15 @@ export function AuthProvider({ children }) {
     return data;
   }, []);
 
+  const isBanned = !!(user && user.is_banned);
+  const banReason = (user && user.ban_reason) || null;
+
   const value = useMemo(
     () => ({
       user,
       loading,
+      isBanned,
+      banReason,
       signup,
       login,
       logout,
@@ -170,6 +175,8 @@ export function AuthProvider({ children }) {
     [
       user,
       loading,
+      isBanned,
+      banReason,
       signup,
       login,
       logout,

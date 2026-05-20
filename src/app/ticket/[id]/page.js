@@ -211,7 +211,7 @@ export default function TicketChatPage() {
         try {
             const form = new FormData();
             form.append('file', file);
-            const res = await fetch('/api/chat/upload', { method: 'POST', credentials: 'include', body: form });
+            const res = await fetch(`/api/tickets/${ticketId}/upload`, { method: 'POST', credentials: 'include', body: form });
             const data = await res.json().catch(() => null);
             if (!res.ok || !data || data.success === false) throw new Error(data?.message || 'Upload failed');
 
